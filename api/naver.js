@@ -5,7 +5,7 @@ export default async function handler(req, res) {
 
   try {
     const r = await fetch(
-      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query + ' 주식')}&display=10&sort=date`,
+      `https://openapi.naver.com/v1/search/news.json?query=${encodeURIComponent(query + ' 주식')}&display=30&sort=date`,
       {
         headers: {
           'X-Naver-Client-Id': process.env.NAVER_CLIENT_ID,
