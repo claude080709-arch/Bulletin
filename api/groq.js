@@ -25,7 +25,6 @@ export default async function handler(req, res) {
       : '';
 
   const articlesText = articles
-    .slice(0, 10)
     .map(
       (a, i) =>
         `[${i + 1}] 제목: ${clean(a.title)}\n내용: ${clean(a.description || a.summary || '')}\nURL: ${a.url || a.link || ''}`
@@ -36,7 +35,8 @@ export default async function handler(req, res) {
 
 종목: ${name} (${ticker}, ${market === 'KR' ? '한국' : '미국'} 주식)
 
-아래 뉴스 기사들 중 이 종목에 가장 관련성 높고 중요한 최대 5개를 선별하여 분석해주세요.
+아래 뉴스 기사들 전부를 검토하여, 이 종목에 실제로 관련성이 있는 기사만 선별하여 분석해주세요.
+관련성이 낮은 기사는 제외하고, 관련 기사가 많으면 많은 대로 모두 분석해주세요. 개수 제한 없음.
 
 ${articlesText}
 
