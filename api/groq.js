@@ -24,10 +24,12 @@ export default async function handler(req, res) {
           .trim()
       : '';
 
+  const truncate = (str, max) => (str && str.length > max ? str.slice(0, max) + '…' : str || '');
+
   const articlesText = articles
     .map(
       (a, i) =>
-        `[${i + 1}] 제목: ${clean(a.title)}\n내용: ${clean(a.description || a.summary || '')}\nURL: ${a.url || a.link || ''}`
+        `[${i + 1}] 제목: ${clean(a.title)}\n내용: ${truncate(clean(a.description || a.summary || ''), 400)}\nURL: ${a.url || a.link || ''}`
     )
     .join('\n\n');
 
@@ -65,7 +67,7 @@ ${articlesText}
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
-        max_tokens: 2048,
+        max_tokens: 6000,
         response_format: { type: 'json_object' },
       }),
     });

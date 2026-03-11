@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="scroll-smooth">
+<html lang="ko" class="scroll-smooth">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -142,17 +142,6 @@ html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
 }
 
 /* ── 우측 엣지 hover 패널 ── */
-.hero-edge-trigger {
-  position: absolute; right: 0; top: 0; bottom: 0;
-  width: 48px; z-index: 20; cursor: pointer;
-}
-.hero-edge-trigger::before {
-  content: '';
-  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
-  width: 1px; height: 120px;
-  background: linear-gradient(to bottom, transparent, rgba(201,169,98,.4), transparent);
-  transition: opacity .3s;
-}
 .hero-edge-panel {
   position: absolute; right: 0; top: 0; bottom: 0;
   width: 480px; z-index: 20;
@@ -462,9 +451,6 @@ html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; 
    APP SCREEN
 ═══════════════════════════════ */
 body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-weight: 300; }
-/* ═══════════════════════════════
-   APP SCREEN
-═══════════════════════════════ */
 #screen-app { display: none; min-height: 100dvh; background: var(--void); }
 
 /* ── Navbar ── */
@@ -836,7 +822,7 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
   padding: 0 1.75rem 0 2rem; max-height: 0; overflow: hidden;
   transition: max-height .38s cubic-bezier(.4,0,.2,1), padding .38s;
 }
-.card-detail.open { max-height: 700px; padding-bottom: 1.5rem; }
+.card-detail.open { max-height: 2000px; padding-bottom: 1.5rem; }
 .card-summary-text {
   font-size: 1rem; color: var(--text-2); line-height: 1.85;
   margin-bottom: 1.25rem; padding-bottom: 1.25rem;
@@ -1246,6 +1232,7 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
           <h2 class="welcome-title fd">Deeper intelligence<br>for your portfolio</h2>
           <div class="welcome-divider"></div>
           <p class="welcome-desc">Search for a stock above to get AI-powered news briefings — Bullish, Bearish, or Neutral signals with short and long-term impact.</p>
+          <p id="guest-notice" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(201,169,98,.6);letter-spacing:.04em;margin-top:-.5rem;margin-bottom:-.5rem;">게스트 모드: 검색 기록은 새로고침 시 초기화됩니다. 저장하려면 로그인하세요.</p>
           <div class="welcome-hints">
             <div class="welcome-hint">
               <div class="hint-icon">
@@ -1299,7 +1286,7 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
 // ━━━ State ━━━
 let sb = null, currentUser = null, isGuest = false;
 let portfolio = [], currentStock = null;
-let searchTimer = null, appEntered = false, searchInited = false;
+let searchTimer = null, searchTimerW = null, appEntered = false, searchInited = false;
 
 const KR_STOCKS = [
   {ticker:'005930',name:'삼성전자',market:'KR'},{ticker:'000660',name:'SK하이닉스',market:'KR'},
@@ -1366,7 +1353,11 @@ async function initApp() {
       if (event === 'SIGNED_IN' && session?.user && !appEntered) { currentUser = session.user; enterApp(); }
       else if (event === 'SIGNED_OUT') { resetState(); goToAuth(); }
     });
-  } catch(e) { console.error('Init:', e); }
+  } catch(e) {
+    console.error('Init:', e);
+    const desc = document.querySelector('.signin-desc');
+    if (desc) desc.textContent = '서비스 초기화에 실패했습니다. 페이지를 새로고침해 주세요.';
+  }
 }
 
 // ━━━ Auth ━━━
@@ -1406,6 +1397,8 @@ async function enterApp() {
 
   const guestBtn = document.getElementById('guest-banner');
   if (guestBtn) guestBtn.style.display = isGuest ? 'inline-flex' : 'none';
+  const guestNotice = document.getElementById('guest-notice');
+  if (guestNotice) guestNotice.style.display = isGuest ? 'block' : 'none';
 
   portfolio = [];
   if (currentUser && sb) await loadPortfolio();
@@ -1432,13 +1425,14 @@ async function addToPortfolio(stock) {
   if (existing) { selectStock(existing); return; }
   try {
     const { data, error } = await sb.from('portfolios').insert({user_id:currentUser.id,ticker:stock.ticker,name:stock.name,market:stock.market}).select().single();
-    if (!error && data) { portfolio.push(data); renderTabs(); selectStock(data); }
-    else selectStock(stock);
-  } catch(e) { selectStock(stock); }
+    if (!error && data) { portfolio.push(data); selectStock(data); }
+    else { console.error('Portfolio save failed:', error?.message); selectStock(stock); }
+  } catch(e) { console.error('Portfolio save error:', e.message); selectStock(stock); }
 }
 async function removeFromPortfolio(id) {
   if (!sb || !currentUser) return;
-  await sb.from('portfolios').delete().eq('id',id);
+  const { error } = await sb.from('portfolios').delete().eq('id', id);
+  if (error) { console.error('Remove failed:', error.message); alert('종목 삭제에 실패했습니다. 다시 시도해 주세요.'); return; }
   portfolio = portfolio.filter(p=>p.id!==id);
   renderTabs();
   if (currentStock?.id===id) { currentStock=null; showView('welcome'); hideSummaryBox(); hideTopbar(); }
@@ -1489,28 +1483,30 @@ function initSearch() {
   searchInited = true;
 
   // topbar 검색창
-  const inp = document.getElementById('search-input');
-  const dd  = document.getElementById('search-dd');
+  const inp  = document.getElementById('search-input');
+  const dd   = document.getElementById('search-dd');
+  // welcome 화면 검색창
+  const winp = document.getElementById('welcome-search-input');
+  const wdd  = document.getElementById('welcome-search-dd');
+
   inp.addEventListener('input', e => {
     clearTimeout(searchTimer);
     const q = e.target.value.trim();
     if (!q) { dd.classList.remove('open'); dd.innerHTML=''; return; }
     searchTimer = setTimeout(()=>doSearch(q, inp, dd), 260);
   });
+
   document.addEventListener('click', e => {
-    if (!e.target.closest('.search-wrap') && !e.target.closest('.welcome-search-field'))
-      { dd.classList.remove('open'); }
+    if (!e.target.closest('.search-wrap')) { dd.classList.remove('open'); }
+    if (!e.target.closest('.welcome-search-field')) { wdd.classList.remove('open'); }
   });
 
-  // welcome 화면 검색창
-  const winp = document.getElementById('welcome-search-input');
-  const wdd  = document.getElementById('welcome-search-dd');
   if (winp) {
     winp.addEventListener('input', e => {
-      clearTimeout(searchTimer);
+      clearTimeout(searchTimerW);
       const q = e.target.value.trim();
       if (!q) { wdd.classList.remove('open'); wdd.innerHTML=''; return; }
-      searchTimer = setTimeout(()=>doSearch(q, winp, wdd), 260);
+      searchTimerW = setTimeout(()=>doSearch(q, winp, wdd), 260);
     });
   }
 }
@@ -1591,11 +1587,13 @@ async function fetchBriefing() {
     if (currentStock.market==='KR') {
       setStatus('Fetching news...');
       const r=await fetch(`/api/naver?query=${encodeURIComponent(currentStock.name)}`);
+      if (!r.ok) throw new Error(`뉴스 조회 실패 (${r.status})`);
       const d=await r.json();
       articles=(d.items||[]).map(a=>({title:a.title,description:a.description,url:a.originallink||a.link}));
     } else {
       setStatus('Fetching news...');
       const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(currentStock.ticker)}`);
+      if (!r.ok) throw new Error(`뉴스 조회 실패 (${r.status})`);
       const d=await r.json();
       articles=(Array.isArray(d)?d:[]).map(a=>({title:a.headline,description:a.summary,url:a.url}));
     }
@@ -1609,6 +1607,7 @@ async function fetchBriefing() {
 
     const gr=await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ticker:currentStock.ticker,name:currentStock.name,articles,market:currentStock.market})});
+    if (!gr.ok) throw new Error(`AI 분석 실패 (${gr.status})`);
     const gd=await gr.json();
     const analyses=gd.analyses||[];
 
@@ -1703,7 +1702,7 @@ function renderBriefing(list) {
             <div class="impact-val">${esc(item.impact_long)}</div>
           </div>
         </div>
-        ${item.url ? `<div class="card-link-row"><a href="${esc(item.url)}" target="_blank" rel="noopener" class="card-link fm">Read original →</a></div>` : ''}
+        ${safeUrl(item.url) ? `<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">Read original →</a></div>` : ''}
       </div>
     </div>`;
   });
@@ -1735,6 +1734,7 @@ function goHome() {
   currentStock = null;
   hideSummaryBox();
   hideTopbar();
+  renderTabs();
   showView('welcome');
   // 검색창 초기화
   const si = document.getElementById('search-input');
@@ -1758,6 +1758,13 @@ function showView(name) {
 function esc(s) {
   if (!s) return '';
   return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function safeUrl(url) {
+  if (!url) return '';
+  try {
+    const u = new URL(url);
+    return (u.protocol === 'http:' || u.protocol === 'https:') ? url : '';
+  } catch { return ''; }
 }
 
 initApp();

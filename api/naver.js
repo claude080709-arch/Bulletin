@@ -2,6 +2,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const { query } = req.query;
   if (!query) return res.json({ items: [] });
+  if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) return res.status(500).json({ error: 'Naver API credentials not configured', items: [] });
 
   try {
     const r = await fetch(

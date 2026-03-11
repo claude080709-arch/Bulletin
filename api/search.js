@@ -2,6 +2,7 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   const { q } = req.query;
   if (!q || q.length < 1) return res.json({ result: [] });
+  if (!process.env.FINNHUB_API_KEY) return res.status(500).json({ error: 'FINNHUB_API_KEY not configured', result: [] });
 
   try {
     const r = await fetch(
