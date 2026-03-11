@@ -1,0 +1,1451 @@
+<!DOCTYPE html>
+<html lang="en" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulletin — Portfolio Intelligence</title>
+
+<!-- Fonts: DEJA VU used Inter + Playfair. We keep those + add IBM Plex Mono for app. -->
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=inter:300,400,500|playfair-display:400,400i,500,600,600i,700|ibm-plex-mono:400,500|cormorant-garamond:400,400i,600,700|noto-sans-kr:300,400,500&display=swap" rel="stylesheet">
+<script src="https://cdn.tailwindcss.com"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<style>
+/* ═══════════════════════════════
+   DESIGN TOKENS (App screen)
+═══════════════════════════════ */
+:root {
+  --void:        #0a0a0a;
+  --gold:        #C9A962;
+  --gold-b:      #D4B872;
+  --text:        #E8E4DC;
+  --text-2:      rgba(232,228,220,.55);
+  --muted:       rgba(232,228,220,.28);
+  --surface:     #101720;
+  --surface-2:   #151D27;
+  --surface-3:   #0D1520;
+  --border:      rgba(232,228,220,.065);
+  --border-b:    rgba(232,228,220,.11);
+  --border-gold: rgba(201,169,98,.2);
+  --positive:    #4CAF7D;
+  --negative:    #D95F5F;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; }
+::selection { background: #C9A962; color: #0a0a0a; }
+.fd { font-family: 'Cormorant Garamond', serif; }
+.fm { font-family: 'IBM Plex Mono', monospace; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 5px; }
+::-webkit-scrollbar-track { background: #0a0a0a; }
+::-webkit-scrollbar-thumb { background: #262626; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: #C9A962; }
+
+/* Noise overlay */
+.noise { pointer-events:none; position:fixed; inset:0; z-index:9999; opacity:.02; mix-blend-mode:overlay; }
+
+/* Loader spin */
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* Masonry */
+.masonry-grid { column-count: 1; column-gap: 1.5rem; }
+@media (min-width: 768px) { .masonry-grid { column-count: 2; } }
+@media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
+.break-inside-avoid { break-inside: avoid; }
+
+/* Map dark mode */
+.map-dark { filter: grayscale(100%) invert(90%) contrast(85%); }
+
+/* ═══════════════════════════════
+   AUTH SCREEN  (DEJA VU exact)
+═══════════════════════════════ */
+#screen-auth {
+  display: block;
+  background: #0a0a0a;
+  color: #d4d4d4;
+  font-family: 'Inter', sans-serif;
+}
+#screen-auth h1,
+#screen-auth h2,
+#screen-auth h3,
+#screen-auth h4 { font-family: 'Playfair Display', serif; }
+
+/* ── NAV (DEJA VU exact) ── */
+#screen-auth nav {
+  position: fixed; top: 0; width: 100%; z-index: 50;
+  mix-blend-mode: difference;
+  padding: 1.5rem 3rem;
+  display: flex; justify-content: space-between; align-items: center;
+  background: linear-gradient(to bottom, rgba(10,10,10,.8), transparent);
+  backdrop-filter: blur(2px);
+}
+.auth-logo {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.35rem; font-weight: 600; font-style: italic;
+  color: #fff; letter-spacing: -.01em; text-transform: uppercase;
+}
+.auth-nav-links {
+  display: none;
+  gap: 2rem; font-size: .82rem; letter-spacing: .04em; color: #a3a3a3; font-weight: 500;
+}
+@media(min-width:768px){ .auth-nav-links { display: flex; } }
+.auth-nav-links a { color: #a3a3a3; text-decoration: none; transition: color .2s; }
+.auth-nav-links a:hover { color: #fff; }
+.auth-nav-cta {
+  font-size: .75rem; letter-spacing: .1em; text-transform: uppercase;
+  font-weight: 500; color: #a3a3a3; text-decoration: none;
+  border: 1px solid rgba(255,255,255,.18); padding: .45rem 1.1rem;
+  transition: all .2s; border-radius: 2px; cursor: pointer;
+  background: transparent;
+}
+.auth-nav-cta:hover { background: #fff; color: #000; }
+
+/* ── HERO ── */
+.auth-hero {
+  position: relative; height: 100vh; width: 100%;
+  display: flex; align-items: flex-end; overflow: hidden;
+}
+.auth-hero-bg { position: absolute; inset: 0; z-index: 0; }
+.auth-hero-bg img {
+  width: 100%; height: 100%; object-fit: cover;
+  opacity: .38;
+  filter: grayscale(100%) brightness(.55) contrast(1.4) sepia(20%);
+}
+.auth-hero-bg::after {
+  content: '';
+  position: absolute; inset: 0;
+  background:
+    radial-gradient(ellipse 100% 55% at 0% 100%, rgba(201,169,98,.10) 0%, transparent 65%),
+    linear-gradient(to top, #0a0a0a 0%, rgba(10,10,10,.6) 45%, rgba(10,10,10,.1) 100%),
+    linear-gradient(to right, rgba(10,10,10,.65) 0%, transparent 60%);
+}
+.auth-hero-body {
+  position: relative; z-index: 10;
+  text-align: left;
+  padding: 0 6vw 8vh;
+  display: flex; flex-direction: column; align-items: flex-start; gap: 1.5rem;
+  max-width: 100%;
+}
+.auth-hero-eyebrow {
+  font-size: .68rem; letter-spacing: .3em; text-transform: uppercase;
+  color: #C9A962; font-family: 'IBM Plex Mono', monospace;
+}
+.auth-hero-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(4rem, 10vw, 10rem);
+  font-style: italic; color: #fff;
+  letter-spacing: -.04em; line-height: .9;
+  margin: 0;
+}
+
+/* ── 우측 엣지 hover 패널 ── */
+.hero-edge-trigger {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 48px; z-index: 20; cursor: pointer;
+}
+.hero-edge-trigger::before {
+  content: '';
+  position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+  width: 1px; height: 120px;
+  background: linear-gradient(to bottom, transparent, rgba(201,169,98,.4), transparent);
+  transition: opacity .3s;
+}
+.hero-edge-panel {
+  position: absolute; right: 0; top: 0; bottom: 0;
+  width: 480px; z-index: 20;
+  display: flex; align-items: center;
+  transform: translateX(calc(100% - 120px));
+  transition: transform .55s cubic-bezier(.4,0,.2,1);
+}
+.hero-edge-panel:hover,
+.hero-edge-panel:focus-within {
+  transform: translateX(0);
+}
+.hero-edge-tab {
+  width: 120px; flex-shrink: 0; height: 100%;
+  display: flex; align-items: center; justify-content: center;
+}
+.hero-edge-tab-line {
+  width: 1px; height: 100px;
+  background: linear-gradient(to bottom, transparent, rgba(201,169,98,.35), transparent);
+  position: relative;
+}
+.hero-edge-tab-dot {
+  width: 5px; height: 5px; border-radius: 50%;
+  background: #C9A962; position: absolute;
+  top: 50%; left: 50%; transform: translate(-50%,-50%);
+  box-shadow: 0 0 8px rgba(201,169,98,.5);
+}
+.hero-edge-content {
+  flex: 1; height: 100%;
+  background: rgba(10,10,10,.92);
+  backdrop-filter: blur(24px);
+  border-left: 1px solid rgba(201,169,98,.12);
+  padding: 3rem 2rem;
+  display: flex; flex-direction: column; justify-content: center; gap: 2.5rem;
+}
+.hero-edge-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .6rem; letter-spacing: .28em; text-transform: uppercase;
+  color: #C9A962; margin-bottom: 1.5rem;
+}
+.hero-edge-stat {
+  display: flex; flex-direction: column; gap: .4rem;
+  padding-bottom: 2rem;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+}
+.hero-edge-stat:last-child { border-bottom: none; padding-bottom: 0; }
+.hero-edge-stat-num {
+  font-family: 'Playfair Display', serif;
+  font-size: 2.2rem; font-style: italic; color: #fff;
+  letter-spacing: -.02em; line-height: 1;
+}
+.hero-edge-stat-num span { color: #C9A962; }
+.hero-edge-stat-desc {
+  font-size: .78rem; color: #525252; line-height: 1.6;
+  font-weight: 300;
+}
+.auth-hero-sub {
+  font-size: clamp(.88rem, 1.2vw, 1rem); line-height: 1.85;
+  color: #8a8a8a; max-width: 380px; font-weight: 300;
+}
+.auth-scroll-indicator {
+  margin-top: 1rem;
+  display: flex; flex-direction: column; align-items: flex-start; gap: .75rem;
+}
+.auth-scroll-line {
+  width: 1px; height: 3.5rem;
+  background: linear-gradient(to bottom, rgba(201,169,98,.5), transparent);
+}
+.auth-scroll-txt {
+  font-size: .6rem; text-transform: uppercase; letter-spacing: .25em;
+  color: #404040; font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── STATEMENT (DEJA VU exact) ── */
+.auth-statement { padding: 6rem 1.5rem 7rem; background: #0a0a0a; }
+.auth-statement-inner { max-width: 640px; margin: 0 auto; text-align: center; }
+.auth-statement-icon { color: #404040; margin-bottom: 1.75rem; }
+.auth-statement-quote {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.4rem, 2.8vw, 2.1rem);
+  font-style: italic; color: #fff;
+  letter-spacing: -.01em; line-height: 1.45; margin-bottom: 1.5rem;
+}
+.auth-statement-body {
+  font-size: .9rem; line-height: 1.95; color: #737373; font-weight: 300;
+}
+
+/* ── GALLERY / MASONRY (DEJA VU exact) ── */
+.auth-gallery { padding: 0 1rem 6rem; background: #0a0a0a; }
+.auth-gallery-inner { max-width: 1280px; margin: 0 auto; }
+.auth-gallery-header {
+  display: flex; justify-content: space-between; align-items: flex-end;
+  border-bottom: 1px solid #171717; padding-bottom: 1.5rem; margin-bottom: 3rem;
+  padding-left: .5rem; padding-right: .5rem;
+}
+.auth-gallery-title {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.25rem; color: #fff; letter-spacing: -.01em;
+}
+.auth-gallery-link {
+  font-size: .65rem; text-transform: uppercase; letter-spacing: .2em;
+  color: #525252; text-decoration: none;
+  display: flex; align-items: center; gap: .5rem; transition: color .2s;
+}
+.auth-gallery-link:hover { color: #C9A962; }
+
+/* gallery — uniform grid */
+.gallery-uniform {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+@media(max-width: 768px) { .gallery-uniform { grid-template-columns: repeat(2, 1fr); } }
+@media(max-width: 480px)  { .gallery-uniform { grid-template-columns: 1fr; } }
+
+.gallery-item { cursor: pointer; }
+.gallery-img-wrap {
+  position: relative; overflow: hidden; border-radius: 2px; background: #171717;
+  aspect-ratio: 4 / 3;
+}
+.gallery-img-wrap img {
+  width: 100%; height: 100%; object-fit: cover;
+  filter: brightness(.75) saturate(.9);
+  opacity: .9; transform: scale(1);
+  transition: filter .7s ease, opacity .5s ease, transform .7s ease;
+}
+.gallery-item:hover .gallery-img-wrap img {
+  filter: brightness(.9) saturate(1.1) sepia(15%) hue-rotate(5deg);
+  opacity: 1; transform: scale(1.05);
+}
+.gallery-cap {
+  margin-top: .65rem;
+  display: flex; justify-content: space-between; align-items: center;
+  opacity: 0; transition: opacity .3s;
+}
+.gallery-item:hover .gallery-cap { opacity: 1; }
+.gallery-cap span { font-size: .7rem; color: #737373; }
+.gallery-cap .cap-right { color: #404040; }
+
+/* ── PROCESS / HOW IT WORKS (DEJA VU exact) ── */
+.auth-process {
+  border-top: 1px solid #171717; border-bottom: 1px solid #171717;
+  background: rgba(255,255,255,.012);
+  padding: 6rem 3rem;
+}
+@media(max-width:768px){ .auth-process { padding: 4rem 1.5rem; } }
+.auth-process-inner { max-width: 1280px; margin: 0 auto; }
+.auth-process-head { margin-bottom: 4.5rem; }
+.auth-process-heading {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.9rem; color: #fff; letter-spacing: -.01em; margin-bottom: .7rem;
+}
+.auth-process-sub { font-size: .85rem; color: #525252; max-width: 460px; line-height: 1.8; }
+.auth-process-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3rem; }
+@media(max-width:768px){ .auth-process-grid { grid-template-columns: 1fr; gap: 2.5rem; } }
+.process-num {
+  display: block; font-family: 'Playfair Display', serif;
+  font-size: 3.5rem; color: #C9A962; line-height: 1;
+  margin-bottom: 1.5rem; transition: color .3s;
+  opacity: .6;
+}
+.auth-process-grid > div:hover .process-num { color: #C9A962; opacity: 1; }
+.process-name { font-size: 1rem; font-weight: 500; color: #fff; margin-bottom: .75rem; }
+.process-desc { font-size: .83rem; line-height: 1.8; color: #737373; }
+
+/* ── FEATURES / SPLIT (DEJA VU studio section exact) ── */
+.auth-features {
+  background: #0a0a0a;
+  padding: 6rem 3rem;
+}
+@media(max-width:768px){ .auth-features { padding: 4rem 1.5rem; } }
+.auth-features-inner {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 5rem; max-width: 1280px; margin: 0 auto; align-items: center;
+}
+@media(max-width:900px){ .auth-features-inner { grid-template-columns: 1fr; gap: 3rem; } }
+.features-img-wrap {
+  height: 500px; width: 100%;
+  border-radius: 2px; overflow: hidden;
+  background: #171717; border: 1px solid #1f1f1f;
+}
+.features-img-wrap img {
+  width: 100%; height: 100%; object-fit: cover; opacity: .7;
+  transition: opacity .5s, transform .6s;
+}
+.features-img-wrap:hover img { opacity: .85; transform: scale(1.03); }
+.features-heading {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.6rem, 2.8vw, 2.2rem); color: #fff;
+  letter-spacing: -.01em; margin-bottom: 1rem;
+}
+.features-body { font-size: .88rem; color: #737373; line-height: 1.9; margin-bottom: 2.5rem; }
+.feature-list { display: flex; flex-direction: column; gap: 1.5rem; }
+.feature-item { display: flex; gap: 1rem; align-items: flex-start; }
+.feature-icon {
+  width: 38px; height: 38px; flex-shrink: 0;
+  border-radius: 50%; background: #171717;
+  border: 1px solid #262626;
+  display: flex; align-items: center; justify-content: center;
+  color: #C9A962;
+}
+.feature-name { font-size: .9rem; font-weight: 500; color: #e5e5e5; margin-bottom: .3rem; }
+.feature-desc { font-size: .78rem; color: #525252; line-height: 1.7; }
+
+/* ── TESTIMONIAL (DEJA VU exact) ── */
+.auth-testimonial {
+  padding: 6rem 1.5rem; background: #0a0a0a;
+  border-top: 1px solid #171717;
+}
+.auth-testimonial-inner { max-width: 640px; margin: 0 auto; text-align: center; }
+.testimonial-quote {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.1rem, 2vw, 1.5rem);
+  font-style: italic; color: #d4d4d4; line-height: 1.65; margin-bottom: 1.5rem;
+}
+.testimonial-author {
+  font-size: .62rem; text-transform: uppercase; letter-spacing: .22em;
+  color: #525252; font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── SIGN IN SECTION (replaces DEJA VU booking form) ── */
+.auth-signin {
+  background: #111111;
+  border-top: 1px solid #171717; border-bottom: 1px solid #171717;
+  padding: 6rem 1.5rem;
+}
+.auth-signin-inner { max-width: 480px; margin: 0 auto; }
+.signin-header { text-align: center; margin-bottom: 3.5rem; }
+.signin-label {
+  font-size: .65rem; text-transform: uppercase; letter-spacing: .22em;
+  color: #525252; margin-bottom: 1.2rem; display: block;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.signin-title {
+  font-family: 'Playfair Display', serif;
+  font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-style: italic; color: #fff;
+  letter-spacing: -.02em; margin-bottom: .6rem;
+}
+.signin-desc { font-size: .88rem; color: #737373; line-height: 1.7; }
+.signin-rule {
+  width: 32px; height: 1px; background: #C9A962; margin: 2rem auto 2.5rem;
+}
+
+/* Buttons (match DEJA VU form button style, gold version) */
+.btn-g {
+  width: 100%; padding: 1.1rem 1.8rem;
+  background: #C9A962; color: #0a0a0a;
+  border: none; font-family: 'IBM Plex Mono', monospace;
+  font-size: .78rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .9rem;
+  position: relative; overflow: hidden; transition: background .2s, transform .15s;
+  margin-bottom: .85rem; border-radius: 2px;
+}
+.btn-g:hover { background: #D4B872; transform: translateY(-1px); }
+.btn-g .sh, .btn-start .sh, .btn-brief .sh {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
+  transform: translateX(-100%); transition: transform .55s;
+}
+.btn-g:hover .sh, .btn-start:hover .sh, .btn-brief:hover:not(:disabled) .sh { transform: translateX(100%); }
+
+.btn-ghost-auth {
+  width: 100%; padding: 1rem; background: transparent;
+  color: #a3a3a3; border: 1px solid #2a2a2a; border-radius: 2px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .74rem; letter-spacing: .08em; text-transform: uppercase;
+  cursor: pointer; transition: border-color .2s, color .2s;
+}
+.btn-ghost-auth:hover { border-color: rgba(201,169,98,.4); color: #C9A962; }
+
+.signin-divider {
+  display: flex; align-items: center; gap: 1rem; margin: 1.4rem 0;
+  font-size: .6rem; color: #404040; letter-spacing: .1em; text-transform: uppercase;
+  font-family: 'IBM Plex Mono', monospace;
+}
+.signin-divider::before,
+.signin-divider::after { content: ''; flex: 1; height: 1px; background: #262626; }
+
+.signin-disclaimer {
+  margin-top: 1.75rem; text-align: center;
+  font-size: .6rem; line-height: 2; color: #404040;
+  font-family: 'IBM Plex Mono', monospace;
+}
+
+/* ── AUTH FOOTER (DEJA VU exact) ── */
+#screen-auth footer {
+  background: #0a0a0a; border-top: 1px solid #171717;
+  padding: 3rem;
+}
+.auth-footer-inner {
+  max-width: 1280px; margin: 0 auto;
+  display: flex; flex-direction: column;
+  align-items: center; gap: .5rem;
+  text-align: center;
+}
+@media(min-width:768px){
+  .auth-footer-inner { flex-direction: row; justify-content: space-between; }
+}
+.auth-footer-brand {
+  font-family: 'Playfair Display', serif;
+  font-size: 1.3rem; color: #fff; font-style: italic; letter-spacing: -.01em;
+}
+.auth-footer-sub { font-size: .72rem; color: #404040; margin-top: .2rem; }
+.auth-footer-copy { font-size: .72rem; color: #3a3a3a; }
+
+/* ═══════════════════════════════
+   APP SCREEN
+═══════════════════════════════ */
+body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-weight: 300; }
+#screen-app { display: none; min-height: 100dvh; }
+
+/* Navbar */
+.app-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 62px; display: flex; align-items: center;
+  padding: 0 3rem; gap: 1.25rem;
+  background: rgba(10,11,15,.88); backdrop-filter: blur(28px);
+  border-bottom: 1px solid var(--border); transition: border-color .3s, background .3s;
+}
+.app-nav.scrolled { background: rgba(10,11,15,.97); border-color: var(--border-b); }
+.nav-logo { font-family: 'Cormorant Garamond', serif; font-size: 1.6rem; font-weight: 600; font-style: italic; color: var(--text); flex-shrink: 0; letter-spacing: -.01em; }
+.nav-sep { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
+.nav-tabs { display: flex; align-items: center; gap: .3rem; flex: 1; overflow-x: auto; scrollbar-width: none; min-width: 0; }
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  padding: .35rem 1rem; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
+  letter-spacing: .05em; text-transform: uppercase;
+  cursor: pointer; border: 1px solid transparent; transition: all .15s;
+  white-space: nowrap; color: var(--muted); background: transparent;
+}
+.nav-tab:hover { color: rgba(232,228,220,.7); border-color: var(--border-b); }
+.nav-tab.active { color: var(--gold); border-color: var(--border-gold); background: rgba(201,169,98,.06); }
+.nav-tab.add { color: rgba(232,228,220,.17); border: 1px dashed rgba(232,228,220,.09); }
+.nav-tab.add:hover { color: var(--gold); border-color: var(--border-gold); }
+.nav-right { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
+.nav-user { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: var(--muted); max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.btn-nav {
+  padding: .38rem .95rem; background: transparent;
+  border: 1px solid var(--border-b); border-radius: 9999px;
+  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  font-size: .68rem; letter-spacing: .07em; text-transform: uppercase;
+  cursor: pointer; transition: all .15s;
+}
+.btn-nav:hover { border-color: var(--border-gold); color: var(--gold); }
+
+/* Layout */
+.app-body {
+  margin-top: 62px;
+  display: grid; grid-template-columns: 340px 1fr;
+  min-height: calc(100dvh - 62px);
+  max-width: 1600px; width: 100%; margin-left: auto; margin-right: auto;
+  padding: 0 3rem; gap: 0 3rem;
+}
+
+/* Left Panel */
+.panel-left {
+  grid-column: 1; grid-row: 1 / 3;
+  padding: 2.5rem 0 4rem;
+  position: sticky; top: 62px; height: calc(100dvh - 62px);
+  overflow-y: auto; scrollbar-width: none;
+  display: flex; flex-direction: column; gap: 2rem;
+}
+.panel-left::-webkit-scrollbar { display: none; }
+
+/* Guest banner */
+.guest-banner {
+  display: none; flex-direction: column; gap: .6rem;
+  background: rgba(201,169,98,.04); border: 1px solid var(--border-gold);
+  border-radius: 1rem; padding: .9rem 1rem;
+}
+.guest-text { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--gold); letter-spacing: .04em; line-height: 1.7; }
+.btn-login-now {
+  padding: .45rem 1.1rem; background: var(--gold); color: var(--void);
+  border: none; border-radius: 9999px; font-family: 'IBM Plex Mono', monospace;
+  font-size: .7rem; letter-spacing: .08em; text-transform: uppercase;
+  cursor: pointer; font-weight: 500; align-self: flex-start; transition: background .15s;
+}
+.btn-login-now:hover { background: var(--gold-b); }
+
+/* Search */
+.search-label { font-family: 'IBM Plex Mono', monospace; font-size: .65rem; letter-spacing: .2em; text-transform: uppercase; color: var(--muted); margin-bottom: .55rem; display: block; }
+.search-wrap { position: relative; }
+.search-input {
+  width: 100%; padding: 1rem 1.2rem;
+  background: var(--surface-3); border: 1px solid var(--border);
+  border-radius: .85rem; color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif; font-size: 1rem; font-weight: 300;
+  outline: none; transition: border-color .2s, box-shadow .2s;
+}
+.search-input:focus { border-color: rgba(201,169,98,.3); box-shadow: 0 0 0 3px rgba(201,169,98,.05); }
+.search-input::placeholder { color: rgba(232,228,220,.18); }
+.search-dd {
+  position: absolute; top: calc(100% + .4rem); left: 0; right: 0;
+  background: #16202C; border: 1px solid rgba(232,228,220,.1);
+  border-radius: .85rem; overflow: hidden; z-index: 300;
+  box-shadow: 0 16px 48px rgba(0,0,0,.6); display: none;
+}
+.search-dd.open { display: block; }
+.dd-item {
+  padding: .85rem 1.1rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border); transition: background .1s;
+}
+.dd-item:last-child { border-bottom: none; }
+.dd-item:hover { background: rgba(255,255,255,.03); }
+.dd-name { font-size: .95rem; color: var(--text); font-weight: 400; }
+.dd-meta { display: flex; align-items: center; gap: .55rem; }
+.dd-ticker { font-family: 'IBM Plex Mono', monospace; font-size: .78rem; color: var(--gold); }
+.dd-mkt { font-family: 'IBM Plex Mono', monospace; font-size: .58rem; padding: .12rem .5rem; border-radius: .4rem; background: rgba(201,169,98,.08); color: var(--muted); border: 1px solid var(--border-gold); letter-spacing: .06em; }
+.dd-msg { padding: 1.1rem; font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--muted); text-align: center; }
+
+/* Stock panel */
+.stock-panel {
+  display: none; flex-direction: column; gap: 1.25rem;
+  padding: 1.5rem; background: var(--surface-3);
+  border: 1px solid var(--border); border-radius: 1.1rem;
+}
+.stock-panel.visible { display: flex; }
+.sp-label { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .2em; text-transform: uppercase; color: var(--gold); opacity: .7; margin-bottom: .3rem; }
+.sp-ticker { font-family: 'Cormorant Garamond', serif; font-size: 3.8rem; font-weight: 600; font-style: italic; letter-spacing: -.02em; line-height: .9; color: var(--text); }
+.sp-name { font-size: .95rem; color: var(--text-2); margin-top: .4rem; font-weight: 300; }
+.sp-badge {
+  display: inline-block; margin-top: .65rem;
+  font-family: 'IBM Plex Mono', monospace; font-size: .6rem;
+  padding: .25rem .75rem; border-radius: 9999px;
+  border: 1px solid var(--border-gold); color: var(--gold);
+  background: rgba(201,169,98,.05); letter-spacing: .1em; text-transform: uppercase;
+}
+.btn-brief {
+  width: 100%; padding: 1.1rem; background: var(--gold); color: var(--void);
+  border: none; border-radius: .75rem; font-family: 'IBM Plex Mono', monospace;
+  font-size: .82rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; position: relative; overflow: hidden; transition: background .2s, transform .25s;
+  display: flex; align-items: center; justify-content: center; gap: .5rem;
+}
+.btn-brief:hover:not(:disabled) { background: var(--gold-b); transform: translateY(-1px); }
+.btn-brief:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.btn-remove-stock {
+  background: transparent; border: none; color: rgba(232,228,220,.18);
+  cursor: pointer; font-family: 'IBM Plex Mono', monospace; font-size: .65rem;
+  letter-spacing: .05em; padding: .2rem 0; transition: color .15s; text-align: left;
+}
+.btn-remove-stock:hover { color: var(--negative); }
+
+/* Summary box */
+.summary-box {
+  display: none; padding: 1rem 1.1rem; background: var(--surface);
+  border: 1px solid var(--border); border-radius: .85rem;
+}
+.summary-box.visible { display: block; }
+.summary-label { font-family: 'IBM Plex Mono', monospace; font-size: .62rem; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: .7rem; }
+.summary-pills { display: flex; flex-wrap: wrap; gap: .4rem; }
+.summary-pill {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .28rem .75rem; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace; font-size: .66rem; letter-spacing: .06em; font-weight: 500;
+}
+.summary-pill.pos { background: rgba(76,175,125,.1); color: var(--positive); border: 1px solid rgba(76,175,125,.2); }
+.summary-pill.neg { background: rgba(217,95,95,.1); color: var(--negative); border: 1px solid rgba(217,95,95,.2); }
+.summary-pill.neu { background: rgba(201,169,98,.08); color: var(--gold); border: 1px solid var(--border-gold); }
+.summary-verdict {
+  margin-top: .85rem; padding-top: .85rem; border-top: 1px solid var(--border);
+  font-size: .9rem; color: var(--text-2); line-height: 1.7; font-weight: 300;
+}
+
+/* Right panel */
+.panel-right { grid-column: 2; grid-row: 1 / 3; padding: 2rem 0 4rem; min-height: 0; }
+
+/* Welcome */
+#view-welcome { padding: 6rem 3rem; text-align: center; }
+.welcome-label { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; letter-spacing: .26em; text-transform: uppercase; color: var(--gold); opacity: .65; margin-bottom: 1.4rem; }
+.welcome-title { font-family: 'Cormorant Garamond', serif; font-size: clamp(3rem, 5vw, 4.5rem); font-weight: 600; font-style: italic; letter-spacing: -.01em; line-height: 1.1; color: var(--text); margin-bottom: .9rem; }
+.welcome-desc { font-size: 1.05rem; color: var(--text-2); line-height: 1.9; margin-bottom: 2.5rem; max-width: 380px; margin-left: auto; margin-right: auto; }
+.btn-start {
+  display: inline-flex; align-items: center; gap: .6rem;
+  padding: 1.1rem 2.75rem; background: var(--gold); color: var(--void);
+  border: none; border-radius: .75rem; font-family: 'IBM Plex Mono', monospace;
+  font-size: .82rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; position: relative; overflow: hidden; transition: background .2s, transform .25s;
+}
+.btn-start:hover { background: var(--gold-b); transform: translateY(-2px); }
+
+/* Brief meta */
+.brief-meta {
+  display: flex; align-items: center; gap: .6rem;
+  font-family: 'IBM Plex Mono', monospace; font-size: .65rem;
+  color: var(--muted); letter-spacing: .1em; text-transform: uppercase; margin-bottom: 1.25rem;
+}
+.brief-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+/* Loader */
+.loader { width: 30px; height: 30px; border: 2px solid var(--border-b); border-top-color: var(--gold); border-radius: 50%; animation: spin .75s linear infinite; margin: 0 auto 1.25rem; }
+.loader-label { font-family: 'IBM Plex Mono', monospace; font-size: .72rem; color: var(--muted); letter-spacing: .1em; text-transform: uppercase; }
+
+/* News cards */
+.cards-grid { display: grid; gap: .9rem; }
+.news-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 1.1rem; overflow: hidden; transition: border-color .2s, box-shadow .2s;
+  position: relative;
+}
+.news-card:hover { border-color: rgba(232,228,220,.12); box-shadow: 0 8px 32px rgba(0,0,0,.28); }
+.news-card::before { content: ''; position: absolute; top: 0; left: 0; width: 4px; height: 100%; }
+.news-card.up::before   { background: linear-gradient(180deg, var(--positive), rgba(76,175,125,.15)); }
+.news-card.down::before { background: linear-gradient(180deg, var(--negative), rgba(217,95,95,.15)); }
+.news-card.flat::before { background: linear-gradient(180deg, var(--gold), rgba(201,169,98,.15)); }
+.card-head { padding: 1.35rem 1.5rem 1.1rem 1.75rem; cursor: pointer; display: flex; flex-direction: column; gap: .7rem; }
+.card-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: .75rem; }
+.card-title { font-size: 1rem; color: var(--text); line-height: 1.6; font-weight: 400; flex: 1; }
+.card-toggle { font-family: 'IBM Plex Mono', monospace; font-size: .65rem; color: var(--muted); white-space: nowrap; flex-shrink: 0; transition: color .15s; padding-top: .15rem; }
+.card-toggle:hover { color: var(--gold); }
+.card-verdict-row { display: flex; align-items: center; gap: .65rem; flex-wrap: wrap; }
+.sentiment-badge {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .22rem .72rem; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
+  letter-spacing: .08em; text-transform: uppercase; flex-shrink: 0;
+}
+.sentiment-badge.up   { background: rgba(76,175,125,.09); color: var(--positive); border: 1px solid rgba(76,175,125,.18); }
+.sentiment-badge.down { background: rgba(217,95,95,.09);  color: var(--negative); border: 1px solid rgba(217,95,95,.18); }
+.sentiment-badge.flat { background: rgba(201,169,98,.08); color: var(--gold); border: 1px solid var(--border-gold); }
+.card-verdict { font-size: .95rem; color: var(--text); line-height: 1.6; font-weight: 400; flex: 1; }
+.card-detail {
+  padding: 0 1.5rem 0 1.75rem; max-height: 0; overflow: hidden;
+  transition: max-height .35s cubic-bezier(.4,0,.2,1), padding .35s;
+}
+.card-detail.open { max-height: 600px; padding-bottom: 1.25rem; }
+.card-summary-text {
+  font-size: .95rem; color: var(--text-2); line-height: 1.82;
+  margin-bottom: 1.1rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-weight: 300;
+}
+.impact-row { display: grid; grid-template-columns: 1fr 1fr; gap: .65rem; margin-bottom: .85rem; }
+.impact { background: var(--surface-2); border-radius: .75rem; padding: .9rem 1rem; }
+.impact-lbl { font-family: 'IBM Plex Mono', monospace; font-size: .58rem; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); margin-bottom: .4rem; }
+.impact-val { font-size: .88rem; color: var(--text); line-height: 1.65; font-weight: 300; }
+.card-link-row { display: flex; justify-content: flex-end; }
+.card-link { color: var(--muted); text-decoration: none; font-family: 'IBM Plex Mono', monospace; font-size: .68rem; transition: color .15s; letter-spacing: .04em; }
+.card-link:hover { color: var(--gold); }
+
+/* Mobile */
+@media (max-width: 900px) {
+  .app-body { grid-template-columns: 1fr; padding: 0 1.25rem; gap: 0; }
+  .panel-left { grid-column: 1; grid-row: 1; position: static; height: auto; padding: 1.5rem 0 0; overflow: visible; }
+  .panel-right { grid-column: 1; grid-row: 2; padding: 1.5rem 0 4rem; }
+  .impact-row { grid-template-columns: 1fr; }
+  .nav-user { display: none; }
+  .app-nav { padding: 0 1.25rem; }
+  #screen-auth nav { padding: 1.25rem 1.25rem; }
+}
+</style>
+</head>
+
+<body class="bg-neutral-950 text-neutral-300 selection:bg-amber-600/30 selection:text-white">
+
+<!-- Noise -->
+<svg class="noise" xmlns="http://www.w3.org/2000/svg">
+  <filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="4" stitchTiles="stitch"/></filter>
+  <rect width="100%" height="100%" filter="url(#n)"/>
+</svg>
+
+<!-- ═══════════════════════════════
+     AUTH SCREEN
+═══════════════════════════════ -->
+<div id="screen-auth">
+
+  <!-- NAV (DEJA VU exact) -->
+  <nav>
+    <span class="auth-logo">Bulletin</span>
+    <div class="auth-nav-links">
+      <a href="#how-it-works">How It Works</a>
+      <a href="#features">Features</a>
+      <a href="#signin">Sign In</a>
+    </div>
+    <button class="auth-nav-cta" onclick="document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Get Started</button>
+  </nav>
+
+  <!-- HERO (DEJA VU exact structure) -->
+  <header class="auth-hero">
+    <div class="auth-hero-bg">
+      <img
+        src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=1920"
+        alt="Stock market charts">
+    </div>
+    <!-- 우측 hover 패널 -->
+    <div class="hero-edge-panel">
+      <div class="hero-edge-tab">
+        <div class="hero-edge-tab-line">
+          <div class="hero-edge-tab-dot"></div>
+        </div>
+      </div>
+      <div class="hero-edge-content">
+        <p class="hero-edge-label">What is Bulletin?</p>
+        <div class="hero-edge-stat">
+          <div class="hero-edge-stat-num"><span>AI</span> Briefings</div>
+          <div class="hero-edge-stat-desc">Every article analyzed and classified — Bullish, Bearish, or Neutral — in seconds.</div>
+        </div>
+        <div class="hero-edge-stat">
+          <div class="hero-edge-stat-num"><span>10</span> Stocks</div>
+          <div class="hero-edge-stat-desc">Track up to 10 positions. KRX, NYSE, NASDAQ — all in one place.</div>
+        </div>
+        <div class="hero-edge-stat">
+          <div class="hero-edge-stat-num"><span>2</span> Horizons</div>
+          <div class="hero-edge-stat-desc">Short-term 1–4 weeks and long-term 3 months+ impact per news signal.</div>
+        </div>
+      </div>
+    </div>
+    <div class="auth-hero-body">
+      <p class="auth-hero-eyebrow">Portfolio Intelligence · AI-Powered</p>
+      <h1 class="auth-hero-title">B<span style="color:#C9A962">u</span>lletin</h1>
+      <div style="width:48px;height:1px;background:rgba(201,169,98,.5);margin:.25rem 0"></div>
+      <p class="auth-hero-sub">AI-analyzed news briefings for every stock in your portfolio. Know what moves your positions — and why.</p>
+      <div class="auth-scroll-indicator">
+        <span class="auth-scroll-line"></span>
+        <span class="auth-scroll-txt">Scroll</span>
+      </div>
+    </div>
+  </header>
+
+  <!-- ARTISTIC STATEMENT (DEJA VU exact) -->
+  <section class="auth-statement">
+    <div class="auth-statement-inner">
+      <!-- pen-tool → trend-up icon -->
+      <svg class="auth-statement-icon" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto">
+        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
+        <polyline points="16 7 22 7 22 13"/>
+      </svg>
+      <h2 class="auth-statement-quote">"Where data becomes conviction."</h2>
+      <p class="auth-statement-body">
+        In a market flooded with noise, Bulletin cuts through. Every briefing scans breaking news across Korean and global markets, classifies each signal — Bullish, Bearish, or Neutral — and delivers a clear verdict for your exact holdings. No guesswork. No wasted morning.
+      </p>
+    </div>
+  </section>
+
+  <!-- PORTFOLIO GRID (DEJA VU exact — finance objects, NO people) -->
+  <section class="auth-gallery" id="gallery">
+    <div class="auth-gallery-inner">
+      <div class="auth-gallery-header">
+        <h3 class="auth-gallery-title">Markets We Cover</h3>
+        <a href="#signin" class="auth-gallery-link">
+          Start Free
+          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
+        </a>
+      </div>
+
+      <div class="gallery-uniform">
+        <!-- 1: Candlestick chart close-up -->
+        <div class="gallery-item">
+          <div class="gallery-img-wrap">
+            <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=700&h=520" alt="Stock market candlestick chart">
+          </div>
+          <div class="gallery-cap">
+            <span>NYSE · NASDAQ</span>
+            <span class="cap-right">US Equities</span>
+          </div>
+        </div>
+
+        <!-- 2: Gold bars / commodity -->
+        <div class="gallery-item">
+          <div class="gallery-img-wrap">
+            <img src="https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&q=80&w=700&h=700" alt="Gold bars">
+          </div>
+          <div class="gallery-cap">
+            <span>Commodities</span>
+            <span class="cap-right">Gold · Macro</span>
+          </div>
+        </div>
+
+        <!-- 3: Multi-screen trading terminal -->
+        <div class="gallery-item">
+          <div class="gallery-img-wrap">
+            <img src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&q=80&w=700&h=460" alt="Trading terminal screens">
+          </div>
+          <div class="gallery-cap">
+            <span>Live Feeds</span>
+            <span class="cap-right">Real-time Data</span>
+          </div>
+        </div>
+
+        <!-- 4: Korean stock ticker board -->
+        <div class="gallery-item">
+          <div class="gallery-img-wrap">
+            <img src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&q=80&w=700&h=500" alt="Candlestick chart data">
+          </div>
+          <div class="gallery-cap">
+            <span>KRX · KOSPI</span>
+            <span class="cap-right">Korean Markets</span>
+          </div>
+        </div>
+
+        <!-- 5: Circuit / AI chip -->
+        <div class="gallery-item">
+          <div class="gallery-img-wrap">
+            <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=700&h=560" alt="AI processor chip">
+          </div>
+          <div class="gallery-cap">
+            <span>AI Analysis</span>
+            <span class="cap-right">Groq · LLaMA</span>
+          </div>
+        </div>
+
+        <!-- 6: ETF / fund instruments -->
+        <div class="gallery-item">
+          <div class="gallery-img-wrap">
+            <img src="https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&q=80&w=700&h=480" alt="Financial instruments">
+          </div>
+          <div class="gallery-cap">
+            <span>ETFs · Funds</span>
+            <span class="cap-right">KODEX · TIGER</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PROCESS (DEJA VU exact) -->
+  <section class="auth-process" id="how-it-works">
+    <div class="auth-process-inner">
+      <div class="auth-process-head">
+        <h3 class="auth-process-heading">How It Works</h3>
+        <p class="auth-process-sub">Three steps from market open to clear conviction. No noise, no filler — just the signals that matter.</p>
+      </div>
+      <div class="auth-process-grid">
+        <div>
+          <span class="process-num">01</span>
+          <h4 class="process-name">Build Your Watchlist</h4>
+          <p class="process-desc">Add up to 10 stocks from Korean (KRX) or US markets. Bulletin supports major indices, ETFs, and individual equities.</p>
+        </div>
+        <div>
+          <span class="process-num">02</span>
+          <h4 class="process-name">AI Scans the News</h4>
+          <p class="process-desc">The model reads up to 10 recent articles per stock, selects the 5 most impactful, and classifies each as Bullish, Bearish, or Neutral.</p>
+        </div>
+        <div>
+          <span class="process-num">03</span>
+          <h4 class="process-name">Get Your Briefing</h4>
+          <p class="process-desc">One tap delivers a clear verdict, one-line summary, and short- and long-term impact per article — so you act with confidence.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STUDIO / FEATURES (DEJA VU split image + text) -->
+  <section class="auth-features" id="features">
+    <div class="auth-features-inner">
+      <!-- Image side -->
+      <div class="features-img-wrap">
+        <img
+          src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=900"
+          alt="Financial data on screens">
+      </div>
+      <!-- Text side -->
+      <div>
+        <h3 class="features-heading">Intelligence built for active investors</h3>
+        <p class="features-body">Bulletin isn't a news feed — it's a decision layer. Every briefing is structured around what actually matters: signal direction, time horizon, and magnitude.</p>
+        <div class="feature-list">
+          <div class="feature-item">
+            <div class="feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
+            </div>
+            <div>
+              <div class="feature-name">Bullish / Bearish / Neutral Signals</div>
+              <div class="feature-desc">Every article is classified so you instantly know the direction of market pressure on your stock.</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+            </div>
+            <div>
+              <div class="feature-name">Short & Long-term Impact</div>
+              <div class="feature-desc">Separate outlook for 1–4 weeks and 3 months+ so you can calibrate your position horizon.</div>
+            </div>
+          </div>
+          <div class="feature-item">
+            <div class="feature-icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
+            </div>
+            <div>
+              <div class="feature-name">KRX + NYSE + NASDAQ</div>
+              <div class="feature-desc">Korean stocks via Naver News API, US equities via Finnhub — all in one unified briefing view.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TESTIMONIAL (DEJA VU exact) -->
+  <section class="auth-testimonial">
+    <div class="auth-testimonial-inner">
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#404040" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 1.75rem">
+        <path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2zM5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>
+      </svg>
+      <p class="testimonial-quote">"I used to spend 40 minutes every morning scanning articles. Now I get the same clarity in under 2 minutes. Bulletin changed how I start my trading day."</p>
+      <p class="testimonial-author">— Early Access User · KOSPI Investor</p>
+    </div>
+  </section>
+
+  <!-- SIGN IN (replaces DEJA VU booking form, same layout) -->
+  <section class="auth-signin" id="signin">
+    <div class="auth-signin-inner">
+      <div class="signin-header">
+        <span class="signin-label">Get started free</span>
+        <h2 class="signin-title">Start reading<br>the market</h2>
+        <p class="signin-desc">Track up to 10 stocks. AI-analyzed briefings on demand. Free to use — sign in with Google to save your portfolio.</p>
+      </div>
+      <div class="signin-rule"></div>
+
+      <button onclick="handleGoogleLogin()" class="btn-g">
+        <span class="sh"></span>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
+          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+        </svg>
+        Continue with Google
+      </button>
+
+      <div class="signin-divider">or</div>
+
+      <button onclick="handleGuestMode()" class="btn-ghost-auth">Browse as Guest</button>
+
+      <p class="signin-disclaimer">Not investment advice. All investment decisions are your own.</p>
+    </div>
+  </section>
+
+  <!-- FOOTER (DEJA VU exact) -->
+  <footer>
+    <div class="auth-footer-inner">
+      <div>
+        <div class="auth-footer-brand">Bulletin.</div>
+        <div class="auth-footer-sub">Portfolio Intelligence Platform</div>
+      </div>
+      <div class="auth-footer-copy">© 2025 Bulletin. Not investment advice.</div>
+    </div>
+  </footer>
+
+</div><!-- /screen-auth -->
+
+
+<!-- ═══════════════════════════════
+     APP SCREEN
+═══════════════════════════════ -->
+<div id="screen-app">
+
+  <nav class="app-nav" id="app-nav">
+    <div class="nav-logo fd">Bulletin</div>
+    <div class="nav-sep"></div>
+    <div class="nav-tabs" id="nav-tabs"></div>
+    <div class="nav-right">
+      <span class="nav-user fm" id="nav-user"></span>
+      <button class="btn-nav fm" id="btn-auth-action"></button>
+    </div>
+  </nav>
+
+  <div class="app-body" id="app-body">
+
+    <!-- LEFT PANEL -->
+    <aside class="panel-left" id="panel-left">
+
+      <div id="guest-banner" class="guest-banner">
+        <span class="guest-text fm">Guest mode — Sign in to save stocks and view history</span>
+        <button class="btn-login-now fm" onclick="goToAuth()">Sign In</button>
+      </div>
+
+      <div id="search-row" style="display:none;">
+        <span class="search-label fm">Stock Search</span>
+        <div class="search-wrap">
+          <input id="search-input" class="search-input" type="text"
+            placeholder="Search by name or ticker" autocomplete="off"/>
+          <div class="search-dd" id="search-dd"></div>
+        </div>
+      </div>
+
+      <div class="stock-panel" id="stock-panel">
+        <div>
+          <div class="sp-label fm">Market Analysis</div>
+          <div class="sp-ticker fd" id="disp-ticker">—</div>
+          <div class="sp-name" id="disp-name">—</div>
+          <div class="sp-badge fm" id="disp-market">—</div>
+        </div>
+        <button class="btn-brief" id="btn-brief" onclick="fetchBriefing()">
+          <span class="sh"></span>
+          <span class="content fm">Get Insights</span>
+        </button>
+        <button class="btn-remove-stock fm" id="btn-remove-stock" style="display:none" onclick="confirmRemove()">Remove from portfolio</button>
+      </div>
+
+      <div class="summary-box" id="summary-box">
+        <div class="summary-label fm">Summary</div>
+        <div class="summary-pills" id="summary-pills"></div>
+        <div class="summary-verdict" id="summary-verdict"></div>
+      </div>
+
+    </aside>
+
+    <!-- RIGHT PANEL -->
+    <main class="panel-right" id="panel-right">
+
+      <div id="view-welcome" style="display:none;">
+        <div class="welcome-label fm">AI-Powered Analysis</div>
+        <h2 class="welcome-title fd">Deeper intelligence<br>for your portfolio</h2>
+        <p class="welcome-desc">Search for a stock on the left to get AI-powered news briefings</p>
+        <button onclick="focusSearch()" class="btn-start">
+          <span class="sh"></span>
+          Search Stocks
+        </button>
+      </div>
+
+      <div id="view-stock" style="display:none;">
+        <div id="brief-area"></div>
+      </div>
+
+    </main>
+
+  </div>
+</div><!-- /screen-app -->
+
+
+<script>
+// ━━━ State ━━━
+let sb = null, currentUser = null, isGuest = false;
+let portfolio = [], currentStock = null;
+let searchTimer = null, appEntered = false, searchInited = false;
+
+const KR_STOCKS = [
+  {ticker:'005930',name:'삼성전자',market:'KR'},{ticker:'000660',name:'SK하이닉스',market:'KR'},
+  {ticker:'207940',name:'삼성바이오로직스',market:'KR'},{ticker:'005380',name:'현대차',market:'KR'},
+  {ticker:'035420',name:'NAVER',market:'KR'},{ticker:'035720',name:'카카오',market:'KR'},
+  {ticker:'373220',name:'LG에너지솔루션',market:'KR'},{ticker:'006400',name:'삼성SDI',market:'KR'},
+  {ticker:'051910',name:'LG화학',market:'KR'},{ticker:'005490',name:'POSCO홀딩스',market:'KR'},
+  {ticker:'105560',name:'KB금융',market:'KR'},{ticker:'055550',name:'신한지주',market:'KR'},
+  {ticker:'086790',name:'하나금융지주',market:'KR'},{ticker:'068270',name:'셀트리온',market:'KR'},
+  {ticker:'012330',name:'현대모비스',market:'KR'},{ticker:'017670',name:'SK텔레콤',market:'KR'},
+  {ticker:'033780',name:'KT&G',market:'KR'},{ticker:'066570',name:'LG전자',market:'KR'},
+  {ticker:'011200',name:'HMM',market:'KR'},{ticker:'015760',name:'한국전력',market:'KR'},
+  {ticker:'259960',name:'크래프톤',market:'KR'},{ticker:'323410',name:'카카오뱅크',market:'KR'},
+  {ticker:'032830',name:'삼성생명',market:'KR'},{ticker:'096770',name:'SK이노베이션',market:'KR'},
+  {ticker:'000270',name:'기아',market:'KR'},{ticker:'316140',name:'우리금융지주',market:'KR'},
+  {ticker:'003550',name:'LG',market:'KR'},{ticker:'034730',name:'SK',market:'KR'},
+  {ticker:'010950',name:'S-Oil',market:'KR'},{ticker:'024110',name:'기업은행',market:'KR'},
+  {ticker:'352820',name:'하이브',market:'KR'},{ticker:'028260',name:'삼성물산',market:'KR'},
+  {ticker:'009150',name:'삼성전기',market:'KR'},{ticker:'032640',name:'LG유플러스',market:'KR'},
+  {ticker:'030200',name:'KT',market:'KR'},{ticker:'003490',name:'대한항공',market:'KR'},
+  {ticker:'000100',name:'유한양행',market:'KR'},{ticker:'042700',name:'한미반도체',market:'KR'},
+  {ticker:'000810',name:'삼성화재',market:'KR'},{ticker:'090430',name:'아모레퍼시픽',market:'KR'},
+  {ticker:'251270',name:'넷마블',market:'KR'},{ticker:'018260',name:'삼성에스디에스',market:'KR'},
+  {ticker:'005935',name:'삼성전자우',market:'KR'},{ticker:'069500',name:'KODEX 200',market:'KR'},
+  {ticker:'091160',name:'KODEX 반도체',market:'KR'},{ticker:'229200',name:'KODEX 코스닥150',market:'KR'},
+  {ticker:'360750',name:'TIGER 미국S&P500',market:'KR'},{ticker:'133690',name:'TIGER 미국나스닥100',market:'KR'},
+  {ticker:'114800',name:'KODEX 인버스',market:'KR'},{ticker:'122630',name:'KODEX 레버리지',market:'KR'},
+  {ticker:'304940',name:'TIGER K-게임',market:'KR'},{ticker:'139230',name:'TIGER 200 IT',market:'KR'},
+  {ticker:'091170',name:'KODEX 은행',market:'KR'},
+];
+
+// ━━━ Init ━━━
+async function initApp() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    const { data:{ session } } = await sb.auth.getSession();
+    if (session?.user) { currentUser = session.user; enterApp(); return; }
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !appEntered) { currentUser = session.user; enterApp(); }
+      else if (event === 'SIGNED_OUT') { resetState(); goToAuth(); }
+    });
+  } catch(e) { console.error('Init:', e); }
+}
+
+// ━━━ Auth ━━━
+async function handleGoogleLogin() {
+  if (!sb) { alert('Please try again in a moment.'); return; }
+  const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.origin } });
+  if (error) alert('Login error: ' + error.message);
+}
+function handleGuestMode() { isGuest = true; currentUser = null; enterApp(); }
+async function handleLogout() { if (sb && !isGuest) await sb.auth.signOut(); resetState(); goToAuth(); }
+function resetState() { appEntered=false; searchInited=false; isGuest=false; currentUser=null; portfolio=[]; currentStock=null; }
+function goToAuth() {
+  document.getElementById('screen-auth').style.display = 'block';
+  document.getElementById('screen-app').style.display = 'none';
+  window.scrollTo(0,0);
+}
+
+// ━━━ Enter App ━━━
+async function enterApp() {
+  if (appEntered) return;
+  appEntered = true;
+  isGuest = !currentUser;
+
+  document.getElementById('screen-auth').style.display = 'none';
+  document.getElementById('screen-app').style.display = 'block';
+  window.scrollTo(0,0);
+
+  const userEl = document.getElementById('nav-user');
+  const authBtn = document.getElementById('btn-auth-action');
+  if (currentUser) {
+    userEl.textContent = (currentUser.email||'').split('@')[0];
+    authBtn.textContent = 'Sign Out'; authBtn.onclick = handleLogout;
+  } else {
+    userEl.textContent = 'Guest';
+    authBtn.textContent = 'Sign In'; authBtn.onclick = goToAuth;
+  }
+
+  document.getElementById('guest-banner').style.display = isGuest ? 'flex' : 'none';
+  document.getElementById('search-row').style.display = 'block';
+
+  portfolio = [];
+  if (currentUser && sb) await loadPortfolio();
+  renderTabs();
+  showView('welcome');
+  initSearch();
+
+  window.addEventListener('scroll', () => {
+    document.getElementById('app-nav')?.classList.toggle('scrolled', window.scrollY > 60);
+  }, {passive:true});
+
+  gsap.fromTo('#app-body', {opacity:0,y:16}, {opacity:1,y:0,duration:.6,ease:'power3.out'});
+}
+
+// ━━━ Portfolio ━━━
+async function loadPortfolio() {
+  const { data, error } = await sb.from('portfolios').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
+  if (!error && data) portfolio = data;
+}
+async function addToPortfolio(stock) {
+  if (isGuest) { selectStock(stock); return; }
+  if (portfolio.length >= 10) { alert('You can track up to 10 stocks.'); return; }
+  const existing = portfolio.find(p=>p.ticker===stock.ticker);
+  if (existing) { selectStock(existing); return; }
+  try {
+    const { data, error } = await sb.from('portfolios').insert({user_id:currentUser.id,ticker:stock.ticker,name:stock.name,market:stock.market}).select().single();
+    if (!error && data) { portfolio.push(data); renderTabs(); selectStock(data); }
+    else selectStock(stock);
+  } catch(e) { selectStock(stock); }
+}
+async function removeFromPortfolio(id) {
+  if (!sb || !currentUser) return;
+  await sb.from('portfolios').delete().eq('id',id);
+  portfolio = portfolio.filter(p=>p.id!==id);
+  renderTabs();
+  if (currentStock?.id===id) { currentStock=null; showView('welcome'); hideSummaryBox(); hideStockPanel(); }
+}
+function confirmRemove() {
+  if (confirm('Remove this stock from your portfolio?')) removeFromPortfolio(currentStock.id);
+}
+
+// ━━━ Tabs ━━━
+function renderTabs() {
+  const c = document.getElementById('nav-tabs'); c.innerHTML='';
+  portfolio.forEach(s => {
+    const t = document.createElement('button');
+    t.className = 'nav-tab fm' + (currentStock?.ticker===s.ticker?' active':'');
+    t.textContent = s.ticker; t.title = s.name;
+    t.onclick = () => selectStock(s);
+    c.appendChild(t);
+  });
+  if (!isGuest && portfolio.length < 10) {
+    const a = document.createElement('button');
+    a.className = 'nav-tab add fm';
+    a.textContent = '+ Add'; a.onclick = focusSearch;
+    c.appendChild(a);
+  }
+}
+function selectStock(stock) {
+  currentStock = stock;
+  document.getElementById('disp-ticker').textContent = stock.ticker;
+  document.getElementById('disp-name').textContent = stock.name;
+  document.getElementById('disp-market').textContent = stock.market==='KR'?'KRX · Korea Exchange':'NYSE / NASDAQ';
+  document.getElementById('stock-panel').classList.add('visible');
+  const removeBtn = document.getElementById('btn-remove-stock');
+  removeBtn.style.display = (currentUser && stock.id) ? 'block' : 'none';
+  const btn = document.getElementById('btn-brief');
+  btn.disabled = false; btn.querySelector('.content').textContent = 'Get Insights';
+  document.getElementById('brief-area').innerHTML = '';
+  hideSummaryBox();
+  showView('stock');
+  renderTabs();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+function hideStockPanel() { document.getElementById('stock-panel').classList.remove('visible'); }
+function hideSummaryBox() { document.getElementById('summary-box').classList.remove('visible'); }
+
+// ━━━ Search ━━━
+function initSearch() {
+  if (searchInited) return;
+  searchInited = true;
+  const inp = document.getElementById('search-input');
+  const dd  = document.getElementById('search-dd');
+  inp.addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    if (!q) { dd.classList.remove('open'); dd.innerHTML=''; return; }
+    searchTimer = setTimeout(()=>doSearch(q), 260);
+  });
+  document.addEventListener('click', e => { if (!e.target.closest('.search-wrap')) dd.classList.remove('open'); });
+}
+async function doSearch(q) {
+  const dd = document.getElementById('search-dd');
+  dd.innerHTML='<div class="dd-msg">Searching...</div>'; dd.classList.add('open');
+  const results=[];
+  if (/[가-힣]/.test(q)) {
+    KR_STOCKS.filter(s=>s.name.includes(q)||s.ticker.includes(q)).slice(0,8).forEach(s=>results.push(s));
+  } else {
+    try {
+      const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const d=await r.json();
+      (d.result||[]).slice(0,6).forEach(s=>results.push({ticker:s.symbol,name:s.description,market:'US'}));
+    } catch(e){}
+    KR_STOCKS.filter(s=>s.ticker.startsWith(q.toUpperCase())||s.name.toUpperCase().includes(q.toUpperCase())).slice(0,3).forEach(s=>results.push(s));
+  }
+  if (!results.length) { dd.innerHTML='<div class="dd-msg">No results found</div>'; return; }
+  dd.innerHTML='';
+  results.slice(0,8).forEach(stock=>{
+    const el=document.createElement('div'); el.className='dd-item';
+    el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker fm">${esc(stock.ticker)}</span><span class="dd-mkt fm">${stock.market==='KR'?'KRX':'US'}</span></div>`;
+    el.onclick=()=>{ document.getElementById('search-input').value=''; dd.classList.remove('open'); dd.innerHTML=''; addToPortfolio(stock); };
+    dd.appendChild(el);
+  });
+}
+function focusSearch() {
+  const el=document.getElementById('search-input'); if(!el) return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>el.focus(),250);
+}
+
+// ━━━ Briefing ━━━
+async function fetchBriefing() {
+  if (!currentStock) return;
+  const btn=document.getElementById('btn-brief');
+  const area=document.getElementById('brief-area');
+  btn.disabled=true; btn.querySelector('.content').textContent='Analyzing...';
+  hideSummaryBox();
+
+  const setStatus=msg=>{
+    area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><div class="loader"></div><div class="loader-label fm">${msg}</div></div>`;
+  };
+
+  try {
+    let articles=[];
+    if (currentStock.market==='KR') {
+      setStatus('Fetching news...');
+      const r=await fetch(`/api/naver?query=${encodeURIComponent(currentStock.name)}`);
+      const d=await r.json();
+      articles=(d.items||[]).map(a=>({title:a.title,description:a.description,url:a.originallink||a.link}));
+    } else {
+      setStatus('Fetching news...');
+      const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(currentStock.ticker)}`);
+      const d=await r.json();
+      articles=(Array.isArray(d)?d:[]).map(a=>({title:a.headline,description:a.summary,url:a.url}));
+    }
+
+    if (!articles.length) {
+      area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">No recent news found</p></div>`;
+      btn.querySelector('.content').textContent='Retry'; return;
+    }
+
+    setStatus(`Analyzing ${articles.length} articles...`);
+
+    const gr=await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({ticker:currentStock.ticker,name:currentStock.name,articles,market:currentStock.market})});
+    const gd=await gr.json();
+    const analyses=gd.analyses||[];
+
+    if (!analyses.length) {
+      area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">Could not generate analysis</p></div>`;
+      btn.querySelector('.content').textContent='Retry'; return;
+    }
+
+    if (currentUser && sb) {
+      sb.from('news_history').insert(analyses.map(a=>({
+        user_id:currentUser.id,ticker:currentStock.ticker,
+        title:a.title,summary:a.summary,sentiment:a.sentiment,
+        impact_short:a.impact_short,impact_long:a.impact_long,url:a.url
+      }))).then(({error})=>{if(error)console.warn('History:',error);});
+    }
+
+    renderBriefing(analyses);
+    renderSummaryBox(analyses);
+    btn.querySelector('.content').textContent='Refresh';
+
+  } catch(e) {
+    area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;color:var(--muted);">Error: ${esc(e.message)}</p></div>`;
+    btn.querySelector('.content').textContent='Retry';
+  } finally { btn.disabled=false; }
+}
+
+// ━━━ Render Summary ━━━
+function renderSummaryBox(list) {
+  const box = document.getElementById('summary-box');
+  const pillsEl = document.getElementById('summary-pills');
+  const verdictEl = document.getElementById('summary-verdict');
+
+  const counts = { Bullish:0, Bearish:0, Neutral:0 };
+  list.forEach(a => { if (counts[a.sentiment] !== undefined) counts[a.sentiment]++; });
+
+  const clsMap = { Bullish:'pos', Bearish:'neg', Neutral:'neu' };
+  const iconMap = { Bullish:'↑', Bearish:'↓', Neutral:'—' };
+  pillsEl.innerHTML = Object.entries(counts)
+    .filter(([,v])=>v>0)
+    .map(([k,v])=>`<span class="summary-pill ${clsMap[k]} fm">${iconMap[k]} ${k} ${v}</span>`)
+    .join('');
+
+  const total = list.length;
+  const pos = counts['Bullish'], neg = counts['Bearish'];
+  let verdict = '';
+  if (pos > neg && pos >= total/2) verdict = `${pos} of ${total} signals are Bullish — overall positive momentum.`;
+  else if (neg > pos && neg >= total/2) verdict = `${neg} of ${total} signals are Bearish — short-term caution advised.`;
+  else verdict = `${pos} Bullish vs ${neg} Bearish — mixed signals.`;
+  verdictEl.textContent = verdict;
+  box.classList.add('visible');
+}
+
+// ━━━ Render Cards ━━━
+function renderBriefing(list) {
+  const area = document.getElementById('brief-area');
+  const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const clsMap = {Bullish:'up',Bearish:'down',Neutral:'flat'};
+  const iconMap = {Bullish:'↑',Bearish:'↓',Neutral:'—'};
+
+  let html = `<div class="brief-meta fm"><div class="brief-dot"></div>Insight Briefing · ${ts} · ${list.length} articles</div>
+  <div class="cards-grid">`;
+
+  list.forEach((item, i) => {
+    const cls = clsMap[item.sentiment] || 'flat';
+    const icon = iconMap[item.sentiment] || '—';
+    const verdict = extractVerdict(item.summary || item.one_line || '');
+
+    html += `
+    <div class="news-card ${cls}" id="card-${i}">
+      <div class="card-head" onclick="toggleCard(${i})">
+        <div class="card-top-row">
+          <span class="card-title">${esc(item.title)}</span>
+          <span class="card-toggle fm" id="toggle-${i}">Details ↓</span>
+        </div>
+        <div class="card-verdict-row">
+          <span class="sentiment-badge ${cls} fm">${icon} ${esc(item.sentiment)}</span>
+          <span class="card-verdict">${esc(verdict)}</span>
+        </div>
+      </div>
+      <div class="card-detail" id="detail-${i}">
+        <div class="card-summary-text">${esc(item.summary)}</div>
+        <div class="impact-row">
+          <div class="impact">
+            <div class="impact-lbl fm">Short-term · 1–4 weeks</div>
+            <div class="impact-val">${esc(item.impact_short)}</div>
+          </div>
+          <div class="impact">
+            <div class="impact-lbl fm">Long-term · 3 months+</div>
+            <div class="impact-val">${esc(item.impact_long)}</div>
+          </div>
+        </div>
+        ${item.url ? `<div class="card-link-row"><a href="${esc(item.url)}" target="_blank" rel="noopener" class="card-link fm">Read original →</a></div>` : ''}
+      </div>
+    </div>`;
+  });
+
+  html += '</div>';
+  area.innerHTML = html;
+
+  gsap.fromTo(area.querySelectorAll('.news-card'),
+    {opacity:0, y:18}, {opacity:1, y:0, duration:.45, stagger:.07, ease:'power3.out'}
+  );
+}
+
+function extractVerdict(text) {
+  if (!text) return '';
+  const match = text.match(/^([^.!?]{10,90}[.!?])/);
+  if (match) return match[1];
+  return text.length > 90 ? text.slice(0, 88) + '…' : text;
+}
+
+function toggleCard(i) {
+  const detail = document.getElementById(`detail-${i}`);
+  const toggle = document.getElementById(`toggle-${i}`);
+  const isOpen = detail.classList.contains('open');
+  detail.classList.toggle('open', !isOpen);
+  toggle.textContent = isOpen ? 'Details ↓' : 'Collapse ↑';
+}
+
+function showView(name) {
+  document.getElementById('view-welcome').style.display = name==='welcome' ? 'block' : 'none';
+  document.getElementById('view-stock').style.display   = name==='stock'   ? 'block' : 'none';
+}
+function esc(s) {
+  if (!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+initApp();
+</script>
+</body>
+</html>
