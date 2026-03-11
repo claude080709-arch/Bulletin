@@ -6,7 +6,7 @@ export default async function handler(req, res) {
   try {
     const to = new Date();
     const from = new Date();
-    from.setDate(from.getDate() - 7);
+    from.setDate(from.getDate() - 14);
     const toStr = to.toISOString().split('T')[0];
     const fromStr = from.toISOString().split('T')[0];
 
@@ -14,7 +14,7 @@ export default async function handler(req, res) {
       `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(symbol)}&from=${fromStr}&to=${toStr}&token=${process.env.FINNHUB_API_KEY}`
     );
     const data = await r.json();
-    res.json(Array.isArray(data) ? data.slice(0, 10) : []);
+    res.json(Array.isArray(data) ? data : []);
   } catch (e) {
     res.status(500).json({ error: e.message });
   }
