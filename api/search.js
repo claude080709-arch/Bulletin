@@ -9,7 +9,7 @@ export default async function handler(req, res) {
     );
     const data = await r.json();
     const filtered = (data.result || [])
-      .filter(s => ['Common Stock', 'ETP'].includes(s.type))
+      .filter(s => ['Common Stock', 'ETP', 'ETF', 'Fund'].includes(s.type) || !s.type)
       .slice(0, 8);
     res.json({ result: filtered });
   } catch (e) {
