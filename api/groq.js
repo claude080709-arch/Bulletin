@@ -9,6 +9,8 @@ export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
 
+  if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not configured', analyses: [] });
+
   const { ticker, name, articles, market } = req.body;
   if (!articles || articles.length === 0) return res.json({ analyses: [] });
 
@@ -72,6 +74,10 @@ ${articlesText}
       }),
     });
 
+    if (!r.ok) {
+      const errData = await r.json().catch(() => ({}));
+      throw new Error(`Groq API 오류 (${r.status}): ${errData.error?.message || '알 수 없는 오류'}`);
+    }
     const data = await r.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error('Groq 응답 없음');

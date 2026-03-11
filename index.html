@@ -1429,7 +1429,11 @@ async function addToPortfolio(stock) {
   try {
     const { data, error } = await sb.from('portfolios').insert({user_id:currentUser.id,ticker:stock.ticker,name:stock.name,market:stock.market}).select().single();
     if (!error && data) { portfolio.push(data); selectStock(data); }
-    else { console.error('Portfolio save failed:', error?.message); selectStock(stock); }
+    else {
+      if (error?.code === '42P01') alert('Supabase 테이블이 없습니다. setup.sql을 실행해 주세요.');
+      else console.error('Portfolio save failed:', error?.message);
+      selectStock(stock);
+    }
   } catch(e) { console.error('Portfolio save error:', e.message); selectStock(stock); }
 }
 async function removeFromPortfolio(id) {
@@ -1615,7 +1619,8 @@ async function fetchBriefing() {
     const analyses=gd.analyses||[];
 
     if (!analyses.length) {
-      area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">Could not generate analysis</p></div>`;
+      const errMsg = gd.error ? `분석 실패: ${gd.error}` : '관련 뉴스를 찾지 못했습니다.';
+      area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">${esc(errMsg)}</p></div>`;
       btn.querySelector('.content').textContent='Retry'; return;
     }
 
