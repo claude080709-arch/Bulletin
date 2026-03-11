@@ -1,0 +1,906 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bulletin | 시장을 읽다</title>
+
+<!-- Fonts -->
+<link rel="preconnect" href="https://fonts.bunny.net">
+<link href="https://fonts.bunny.net/css?family=cormorant-garamond:400,400i,600,700|ibm-plex-mono:400,500|noto-sans-kr:300,400,500&display=swap" rel="stylesheet">
+
+<!-- Tailwind -->
+<script src="https://cdn.tailwindcss.com"></script>
+<!-- Supabase -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- GSAP -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+
+<style>
+/* ── Design Tokens ── */
+:root {
+  --void:        #0A0B0F;
+  --void-2:      #0D0E12;
+  --gold:        #C9A962;
+  --gold-bright: #D4B872;
+  --gold-dim:    rgba(201,169,98,.18);
+  --text:        #E8E4DC;
+  --text-2:      rgba(232,228,220,.58);
+  --muted:       rgba(232,228,220,.30);
+  --surface:     #111820;
+  --surface-2:   #161E28;
+  --border:      rgba(232,228,220,.07);
+  --border-b:    rgba(232,228,220,.12);
+  --border-gold: rgba(201,169,98,.22);
+  --positive:    #4CAF7D;
+  --negative:    #D95F5F;
+}
+
+/* ── Base ── */
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { background: var(--void); color: var(--text); }
+body {
+  font-family: 'Noto Sans KR', sans-serif;
+  font-weight: 300;
+  background: var(--void);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+::selection { background: var(--gold); color: var(--void); }
+
+/* ── Typography ── */
+.font-display { font-family: 'Cormorant Garamond', serif; }
+.font-mono    { font-family: 'IBM Plex Mono', monospace; }
+
+/* ── Noise ── */
+.noise {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 9999;
+  opacity: .025; mix-blend-mode: overlay;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--void); }
+::-webkit-scrollbar-thumb { background: #1a2330; border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+/* ─────────────────────────────────────
+   AUTH SCREEN
+───────────────────────────────────── */
+#screen-auth {
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  position: relative;
+  overflow: hidden;
+}
+#screen-auth::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background:
+    radial-gradient(ellipse 80% 60% at 20% 90%, rgba(201,169,98,.055) 0%, transparent 55%),
+    radial-gradient(ellipse 55% 45% at 80% 10%, rgba(111,207,151,.025) 0%, transparent 48%),
+    linear-gradient(180deg, var(--void) 0%, var(--void-2) 100%);
+}
+.auth-inner {
+  position: relative; z-index: 1;
+  text-align: center;
+  max-width: 400px; width: 100%;
+}
+.auth-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .62rem;
+  letter-spacing: .28em;
+  text-transform: uppercase;
+  color: var(--gold);
+  opacity: .8;
+  margin-bottom: 1.5rem;
+}
+.auth-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3.8rem, 11vw, 5.8rem);
+  font-weight: 600;
+  font-style: italic;
+  letter-spacing: -.02em;
+  line-height: .92;
+  color: var(--text);
+  margin-bottom: .5rem;
+}
+.auth-sub {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(1.1rem, 3vw, 1.3rem);
+  font-style: italic;
+  color: var(--text-2);
+  letter-spacing: .01em;
+  margin-bottom: 3rem;
+}
+.auth-rule {
+  width: 48px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--gold), transparent);
+  margin: 0 auto 2.5rem;
+}
+.btn-google {
+  width: 100%; padding: 1rem 1.5rem;
+  background: var(--gold); color: var(--void);
+  border: none; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .72rem; font-weight: 500;
+  letter-spacing: .12em; text-transform: uppercase;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center; gap: .75rem;
+  position: relative; overflow: hidden;
+  transition: transform .3s ease, background .25s ease;
+  margin-bottom: .65rem;
+}
+.btn-google:hover { background: var(--gold-bright); transform: translateY(-2px); }
+.btn-google .shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  transform: translateX(-100%);
+  transition: transform .6s ease;
+}
+.btn-google:hover .shimmer { transform: translateX(100%); }
+.btn-guest {
+  width: 100%; padding: .85rem 1.5rem;
+  background: transparent; color: var(--muted);
+  border: 1px solid var(--border-b); border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .68rem; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color .25s, color .25s;
+}
+.btn-guest:hover { border-color: var(--border-gold); color: var(--text); }
+.auth-disclaimer {
+  margin-top: 3.5rem;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .62rem; line-height: 1.9;
+  color: rgba(232,228,220,.18);
+  letter-spacing: .02em;
+}
+
+/* ─────────────────────────────────────
+   APP SCREEN
+───────────────────────────────────── */
+#screen-app { display: none; min-height: 100dvh; }
+
+/* Navbar */
+.app-nav {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
+  height: 56px;
+  display: flex; align-items: center;
+  padding: 0 1.5rem; gap: 1.1rem;
+  background: rgba(10,11,15,.9);
+  backdrop-filter: blur(24px);
+  border-bottom: 1px solid var(--border);
+  transition: border-color .3s, background .3s;
+}
+.app-nav.scrolled {
+  background: rgba(10,11,15,.97);
+  border-color: var(--border-b);
+}
+.nav-logo {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: 1.45rem; font-weight: 600; font-style: italic;
+  color: var(--text); flex-shrink: 0; letter-spacing: -.01em;
+}
+.nav-divider { width: 1px; height: 18px; background: var(--border); flex-shrink: 0; }
+.nav-tabs {
+  display: flex; align-items: center; gap: .2rem;
+  flex: 1; overflow-x: auto; scrollbar-width: none; min-width: 0;
+}
+.nav-tabs::-webkit-scrollbar { display: none; }
+.nav-tab {
+  padding: .3rem .8rem; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .64rem; letter-spacing: .04em; text-transform: uppercase;
+  cursor: pointer; border: 1px solid transparent;
+  transition: all .15s; white-space: nowrap;
+  color: var(--muted); background: transparent;
+}
+.nav-tab:hover { color: rgba(232,228,220,.7); border-color: var(--border-b); }
+.nav-tab.active { color: var(--gold); border-color: var(--border-gold); background: rgba(201,169,98,.06); }
+.nav-tab.add { color: rgba(232,228,220,.18); border: 1px dashed rgba(232,228,220,.1); }
+.nav-tab.add:hover { color: var(--gold); border-color: var(--border-gold); }
+.nav-right { display: flex; align-items: center; gap: .6rem; flex-shrink: 0; }
+.nav-user {
+  font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
+  color: var(--muted); max-width: 110px;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.btn-nav-action {
+  padding: .3rem .8rem; background: transparent;
+  border: 1px solid var(--border-b); border-radius: 9999px;
+  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
+  font-size: .58rem; letter-spacing: .06em; text-transform: uppercase;
+  cursor: pointer; transition: all .15s; white-space: nowrap;
+}
+.btn-nav-action:hover { border-color: var(--border-gold); color: var(--gold); }
+
+/* Main */
+.app-main {
+  margin-top: 56px;
+  padding: 2.5rem 1.75rem 5rem;
+  max-width: 900px; width: 100%;
+  margin-left: auto; margin-right: auto;
+}
+
+/* Guest Banner */
+.guest-banner {
+  display: none; align-items: center; justify-content: space-between; gap: 1rem;
+  background: rgba(201,169,98,.04);
+  border: 1px solid var(--border-gold);
+  border-radius: 9999px;
+  padding: .6rem 1rem .6rem 1.25rem;
+  margin-bottom: 1.75rem;
+}
+.guest-text {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .64rem; color: var(--gold); letter-spacing: .04em;
+}
+.btn-login-now {
+  padding: .3rem .85rem; background: var(--gold); color: var(--void);
+  border: none; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace; font-size: .6rem;
+  letter-spacing: .08em; text-transform: uppercase;
+  cursor: pointer; font-weight: 500; flex-shrink: 0;
+  transition: background .15s;
+}
+.btn-login-now:hover { background: var(--gold-bright); }
+
+/* Search */
+.search-label {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .56rem; letter-spacing: .22em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: .5rem; display: block;
+}
+.search-wrap { position: relative; }
+.search-input {
+  width: 100%; padding: 1rem 1.25rem;
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 1rem; color: var(--text);
+  font-family: 'Noto Sans KR', sans-serif; font-size: .9rem; font-weight: 300;
+  outline: none; transition: border-color .25s, box-shadow .25s;
+}
+.search-input:focus {
+  border-color: rgba(201,169,98,.35);
+  box-shadow: 0 0 0 3px rgba(201,169,98,.06);
+}
+.search-input::placeholder { color: rgba(232,228,220,.15); font-weight: 300; }
+.search-dd {
+  position: absolute; top: calc(100% + .45rem); left: 0; right: 0;
+  background: var(--surface-2); border: 1px solid rgba(232,228,220,.1);
+  border-radius: 1rem; overflow: hidden; z-index: 300;
+  box-shadow: 0 20px 56px rgba(0,0,0,.55); display: none;
+}
+.search-dd.open { display: block; }
+.dd-item {
+  padding: .72rem 1.25rem; cursor: pointer;
+  display: flex; align-items: center; justify-content: space-between;
+  border-bottom: 1px solid var(--border);
+  transition: background .1s;
+}
+.dd-item:last-child { border-bottom: none; }
+.dd-item:hover { background: rgba(255,255,255,.03); }
+.dd-name { font-size: .85rem; color: var(--text); font-weight: 400; }
+.dd-meta { display: flex; align-items: center; gap: .6rem; }
+.dd-ticker { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: var(--gold); }
+.dd-mkt {
+  font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
+  padding: .12rem .45rem; border-radius: .5rem;
+  background: rgba(201,169,98,.08); color: var(--muted);
+  border: 1px solid var(--border-gold); letter-spacing: .06em;
+}
+.dd-msg {
+  padding: 1.1rem; font-family: 'IBM Plex Mono', monospace;
+  font-size: .68rem; color: var(--muted); text-align: center;
+  letter-spacing: .03em;
+}
+
+/* Welcome View */
+#view-welcome { text-align: center; padding: 6rem 2rem; }
+.welcome-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .6rem; letter-spacing: .26em; text-transform: uppercase;
+  color: var(--gold); opacity: .7; margin-bottom: 1.5rem;
+}
+.welcome-title {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(2.4rem, 6vw, 3.4rem);
+  font-weight: 600; font-style: italic;
+  letter-spacing: -.01em; line-height: 1.1;
+  color: var(--text); margin-bottom: .75rem;
+}
+.welcome-desc {
+  font-size: .88rem; color: var(--text-2);
+  line-height: 1.85; margin-bottom: 2.5rem;
+  max-width: 360px; margin-left: auto; margin-right: auto;
+}
+.btn-start {
+  display: inline-flex; align-items: center; gap: .5rem;
+  padding: 1rem 2.5rem;
+  background: var(--gold); color: var(--void);
+  border: none; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .72rem; font-weight: 500; letter-spacing: .12em; text-transform: uppercase;
+  cursor: pointer; position: relative; overflow: hidden;
+  transition: transform .3s ease, background .25s ease;
+}
+.btn-start:hover { background: var(--gold-bright); transform: translateY(-2px); }
+.btn-start .shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  transform: translateX(-100%); transition: transform .6s ease;
+}
+.btn-start:hover .shimmer { transform: translateX(100%); }
+
+/* Stock Header */
+.stock-hdr {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: 1.5rem; margin-bottom: 2.5rem; padding-bottom: 2rem;
+  border-bottom: 1px solid var(--border);
+}
+.stock-eyebrow {
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .52rem; letter-spacing: .2em; text-transform: uppercase;
+  color: var(--gold); opacity: .7; margin-bottom: .5rem;
+}
+.stock-ticker {
+  font-family: 'Cormorant Garamond', serif;
+  font-size: clamp(3rem, 7vw, 4.4rem);
+  font-weight: 600; font-style: italic;
+  letter-spacing: -.02em; line-height: .95;
+  color: var(--text);
+}
+.stock-name { font-size: .82rem; color: var(--text-2); margin-top: .4rem; font-weight: 300; }
+.stock-badge {
+  display: inline-block; margin-top: .6rem;
+  font-family: 'IBM Plex Mono', monospace; font-size: .52rem;
+  padding: .25rem .65rem; border-radius: 9999px;
+  border: 1px solid var(--border-gold); color: var(--gold);
+  background: rgba(201,169,98,.05); letter-spacing: .1em; text-transform: uppercase;
+}
+.btn-brief {
+  padding: .85rem 1.75rem;
+  background: var(--gold); color: var(--void);
+  border: none; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace;
+  font-size: .7rem; font-weight: 500; letter-spacing: .1em; text-transform: uppercase;
+  cursor: pointer; flex-shrink: 0;
+  position: relative; overflow: hidden;
+  transition: transform .3s ease, background .25s ease;
+  display: flex; align-items: center; gap: .5rem;
+}
+.btn-brief:hover:not(:disabled) { background: var(--gold-bright); transform: translateY(-2px); }
+.btn-brief:disabled { opacity: .38; cursor: not-allowed; transform: none; }
+.btn-brief .shimmer {
+  position: absolute; inset: 0;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.15), transparent);
+  transform: translateX(-100%); transition: transform .6s ease;
+}
+.btn-brief:hover:not(:disabled) .shimmer { transform: translateX(100%); }
+
+/* Loading */
+@keyframes spin { to { transform: rotate(360deg); } }
+.loader {
+  width: 28px; height: 28px;
+  border: 1.5px solid var(--border-b); border-top-color: var(--gold);
+  border-radius: 50%; animation: spin .75s linear infinite;
+  margin: 0 auto 1.25rem;
+}
+.loading-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: .66rem;
+  color: var(--muted); letter-spacing: .12em; text-transform: uppercase;
+}
+
+/* Brief meta */
+.brief-meta {
+  display: flex; align-items: center; gap: .55rem;
+  font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
+  color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
+  margin-bottom: 1.25rem;
+}
+.brief-dot { width: 5px; height: 5px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
+
+/* News Cards */
+.cards-grid { display: grid; gap: .85rem; }
+.news-card {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 1.25rem; padding: 1.5rem 1.5rem 1.5rem 1.75rem;
+  position: relative; overflow: hidden;
+  transition: border-color .25s, transform .25s, box-shadow .25s;
+}
+.news-card::before {
+  content: ''; position: absolute; top: 0; left: 0;
+  width: 3px; height: 100%;
+}
+.news-card.up::before    { background: linear-gradient(180deg, var(--positive), rgba(76,175,125,.3)); }
+.news-card.down::before  { background: linear-gradient(180deg, var(--negative), rgba(217,95,95,.3)); }
+.news-card.flat::before  { background: linear-gradient(180deg, var(--gold), rgba(201,169,98,.3)); }
+.news-card:hover {
+  border-color: rgba(232,228,220,.13);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0,0,0,.35);
+}
+.card-head {
+  display: flex; align-items: flex-start; justify-content: space-between;
+  gap: .85rem; margin-bottom: 1rem;
+}
+.card-title { font-size: .87rem; color: var(--text); line-height: 1.62; font-weight: 400; }
+.card-link {
+  color: var(--muted); text-decoration: none;
+  font-family: 'IBM Plex Mono', monospace; font-size: .62rem;
+  display: flex; align-items: center; flex-shrink: 0;
+  transition: color .15s; letter-spacing: .04em; white-space: nowrap; margin-top: .1rem;
+}
+.card-link:hover { color: var(--gold); }
+.sentiment {
+  display: inline-flex; align-items: center; gap: .3rem;
+  padding: .2rem .65rem; border-radius: 9999px;
+  font-family: 'IBM Plex Mono', monospace; font-size: .56rem;
+  letter-spacing: .08em; text-transform: uppercase; margin-bottom: .9rem;
+}
+.sentiment.up   { background: rgba(76,175,125,.08);  color: var(--positive); border: 1px solid rgba(76,175,125,.2); }
+.sentiment.down { background: rgba(217,95,95,.08);   color: var(--negative); border: 1px solid rgba(217,95,95,.2); }
+.sentiment.flat { background: rgba(201,169,98,.08);  color: var(--gold);     border: 1px solid var(--border-gold); }
+.card-summary {
+  font-size: .84rem; color: var(--text-2); line-height: 1.78;
+  margin-bottom: 1.1rem; padding-bottom: 1.1rem;
+  border-bottom: 1px solid var(--border); font-weight: 300;
+}
+.impact-row { display: grid; grid-template-columns: 1fr 1fr; gap: .55rem; }
+.impact { background: var(--surface-2); border-radius: .65rem; padding: .8rem .9rem; }
+.impact-lbl {
+  font-family: 'IBM Plex Mono', monospace; font-size: .5rem;
+  letter-spacing: .14em; text-transform: uppercase;
+  color: var(--muted); margin-bottom: .35rem;
+}
+.impact-val { font-size: .77rem; color: var(--text); line-height: 1.62; font-weight: 300; }
+.btn-remove {
+  display: block; background: transparent; border: none;
+  color: rgba(232,228,220,.15); cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace; font-size: .58rem;
+  letter-spacing: .06em; padding: .35rem 0; margin-top: 1.5rem;
+  transition: color .15s;
+}
+.btn-remove:hover { color: var(--negative); }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .impact-row { grid-template-columns: 1fr; }
+  .stock-hdr { flex-direction: column; gap: .85rem; }
+  .btn-brief { width: 100%; justify-content: center; }
+  .app-main { padding: 1.5rem 1rem 4rem; }
+  .nav-user { display: none; }
+}
+</style>
+</head>
+
+<body>
+
+<!-- Noise -->
+<svg class="noise" xmlns="http://www.w3.org/2000/svg">
+  <filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="4" stitchTiles="stitch"/></filter>
+  <rect width="100%" height="100%" filter="url(#n)"/>
+</svg>
+
+<!-- ══════════════════════════════════
+     AUTH SCREEN
+══════════════════════════════════ -->
+<div id="screen-auth">
+  <div class="auth-inner">
+    <div class="auth-eyebrow">Portfolio Intelligence</div>
+    <h1 class="auth-logo font-display">Bulletin</h1>
+    <p class="auth-sub font-display">시장의 결을 읽고, 투자의 맥을 짚다</p>
+    <div class="auth-rule"></div>
+
+    <button onclick="handleGoogleLogin()" class="btn-google">
+      <span class="shimmer"></span>
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" flex-shrink="0">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Google 계정으로 시작하기
+    </button>
+
+    <button onclick="handleGuestMode()" class="btn-guest">
+      로그인 없이 둘러보기 →
+    </button>
+
+    <div class="auth-disclaimer font-mono">
+      본 서비스는 투자 권유가 아닙니다<br>
+      모든 투자 결정의 책임은 본인에게 있습니다
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════
+     APP SCREEN
+══════════════════════════════════ -->
+<div id="screen-app">
+
+  <!-- Navbar -->
+  <nav class="app-nav" id="app-nav">
+    <div class="nav-logo font-display">Bulletin</div>
+    <div class="nav-divider"></div>
+    <div class="nav-tabs" id="nav-tabs"></div>
+    <div class="nav-right">
+      <span class="nav-user font-mono" id="nav-user"></span>
+      <button class="btn-nav-action font-mono" id="btn-auth-action"></button>
+    </div>
+  </nav>
+
+  <div class="app-main" id="app-main">
+
+    <!-- Guest Banner -->
+    <div id="guest-banner" class="guest-banner">
+      <span class="guest-text font-mono">게스트 모드 — 관심 종목 저장은 로그인 후 이용 가능합니다</span>
+      <button class="btn-login-now font-mono" onclick="goToAuth()">로그인</button>
+    </div>
+
+    <!-- Search -->
+    <div id="search-row" style="display:none; margin-bottom: 2.5rem;">
+      <span class="search-label font-mono">종목 검색</span>
+      <div class="search-wrap">
+        <input id="search-input" class="search-input" type="text"
+          placeholder="종목명 또는 티커를 입력하세요" autocomplete="off"/>
+        <div class="search-dd" id="search-dd"></div>
+      </div>
+    </div>
+
+    <!-- Welcome View -->
+    <div id="view-welcome" style="display:none;">
+      <div class="text-center py-24 px-8">
+        <div class="welcome-eyebrow font-mono">AI-Powered Analysis</div>
+        <h2 class="welcome-title font-display">
+          당신의 포트폴리오에<br>깊이를 더하다
+        </h2>
+        <p class="welcome-desc">
+          관심 종목을 검색하고, AI가 분석한<br>뉴스 인사이트를 확인하세요
+        </p>
+        <button onclick="focusSearch()" class="btn-start font-mono">
+          <span class="shimmer"></span>
+          종목 검색 시작
+        </button>
+      </div>
+    </div>
+
+    <!-- Stock View -->
+    <div id="view-stock" style="display:none;">
+      <div class="stock-hdr">
+        <div>
+          <div class="stock-eyebrow font-mono">Market Analysis</div>
+          <div class="stock-ticker font-display" id="disp-ticker">—</div>
+          <div class="stock-name" id="disp-name">—</div>
+          <div class="stock-badge font-mono" id="disp-market">—</div>
+        </div>
+        <button class="btn-brief" id="btn-brief" onclick="fetchBriefing()">
+          <span class="shimmer"></span>
+          <span class="content font-mono">인사이트 확인</span>
+        </button>
+      </div>
+      <div id="brief-area"></div>
+    </div>
+
+  </div>
+</div><!-- /screen-app -->
+
+
+<!-- ══════════════════════════════════
+     SCRIPTS
+══════════════════════════════════ -->
+<script>
+// ━━━ State ━━━
+let sb = null;
+let currentUser = null;
+let isGuest = false;
+let portfolio = [];
+let currentStock = null;
+let searchTimer = null;
+let appEntered = false;
+let searchInited = false;
+
+const KR_STOCKS = [
+  {ticker:'005930',name:'삼성전자',market:'KR'},{ticker:'000660',name:'SK하이닉스',market:'KR'},
+  {ticker:'207940',name:'삼성바이오로직스',market:'KR'},{ticker:'005380',name:'현대차',market:'KR'},
+  {ticker:'035420',name:'NAVER',market:'KR'},{ticker:'035720',name:'카카오',market:'KR'},
+  {ticker:'373220',name:'LG에너지솔루션',market:'KR'},{ticker:'006400',name:'삼성SDI',market:'KR'},
+  {ticker:'051910',name:'LG화학',market:'KR'},{ticker:'005490',name:'POSCO홀딩스',market:'KR'},
+  {ticker:'105560',name:'KB금융',market:'KR'},{ticker:'055550',name:'신한지주',market:'KR'},
+  {ticker:'086790',name:'하나금융지주',market:'KR'},{ticker:'068270',name:'셀트리온',market:'KR'},
+  {ticker:'012330',name:'현대모비스',market:'KR'},{ticker:'017670',name:'SK텔레콤',market:'KR'},
+  {ticker:'033780',name:'KT&G',market:'KR'},{ticker:'066570',name:'LG전자',market:'KR'},
+  {ticker:'011200',name:'HMM',market:'KR'},{ticker:'015760',name:'한국전력',market:'KR'},
+  {ticker:'259960',name:'크래프톤',market:'KR'},{ticker:'323410',name:'카카오뱅크',market:'KR'},
+  {ticker:'032830',name:'삼성생명',market:'KR'},{ticker:'096770',name:'SK이노베이션',market:'KR'},
+  {ticker:'000270',name:'기아',market:'KR'},{ticker:'316140',name:'우리금융지주',market:'KR'},
+  {ticker:'003550',name:'LG',market:'KR'},{ticker:'034730',name:'SK',market:'KR'},
+  {ticker:'010950',name:'S-Oil',market:'KR'},{ticker:'024110',name:'기업은행',market:'KR'},
+  {ticker:'352820',name:'하이브',market:'KR'},{ticker:'028260',name:'삼성물산',market:'KR'},
+  {ticker:'009150',name:'삼성전기',market:'KR'},{ticker:'032640',name:'LG유플러스',market:'KR'},
+  {ticker:'030200',name:'KT',market:'KR'},{ticker:'003490',name:'대한항공',market:'KR'},
+  {ticker:'000100',name:'유한양행',market:'KR'},{ticker:'042700',name:'한미반도체',market:'KR'},
+  {ticker:'000810',name:'삼성화재',market:'KR'},{ticker:'090430',name:'아모레퍼시픽',market:'KR'},
+  {ticker:'251270',name:'넷마블',market:'KR'},{ticker:'018260',name:'삼성에스디에스',market:'KR'},
+  {ticker:'005935',name:'삼성전자우',market:'KR'},{ticker:'069500',name:'KODEX 200',market:'KR'},
+  {ticker:'091160',name:'KODEX 반도체',market:'KR'},{ticker:'229200',name:'KODEX 코스닥150',market:'KR'},
+  {ticker:'360750',name:'TIGER 미국S&P500',market:'KR'},{ticker:'133690',name:'TIGER 미국나스닥100',market:'KR'},
+  {ticker:'114800',name:'KODEX 인버스',market:'KR'},{ticker:'122630',name:'KODEX 레버리지',market:'KR'},
+  {ticker:'304940',name:'TIGER K-게임',market:'KR'},{ticker:'139230',name:'TIGER 200 IT',market:'KR'},
+  {ticker:'091170',name:'KODEX 은행',market:'KR'},
+];
+
+// ━━━ Init ━━━
+async function initApp() {
+  try {
+    const res = await fetch('/api/config');
+    const cfg = await res.json();
+    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
+    const { data:{ session } } = await sb.auth.getSession();
+    if (session?.user) { currentUser = session.user; enterApp(); return; }
+    sb.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session?.user && !appEntered) {
+        currentUser = session.user; enterApp();
+      } else if (event === 'SIGNED_OUT') { resetState(); goToAuth(); }
+    });
+  } catch(e) { console.error('Init:', e); }
+}
+
+// ━━━ Auth ━━━
+async function handleGoogleLogin() {
+  if (!sb) { alert('잠시 후 다시 시도하세요.'); return; }
+  const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.origin } });
+  if (error) alert('로그인 오류: ' + error.message);
+}
+function handleGuestMode() { isGuest = true; currentUser = null; enterApp(); }
+async function handleLogout() { if (sb && !isGuest) await sb.auth.signOut(); resetState(); goToAuth(); }
+function resetState() { appEntered=false; searchInited=false; isGuest=false; currentUser=null; portfolio=[]; currentStock=null; }
+function goToAuth() {
+  document.getElementById('screen-auth').style.display = 'flex';
+  document.getElementById('screen-app').style.display = 'none';
+  window.scrollTo(0,0);
+}
+
+// ━━━ Enter App ━━━
+async function enterApp() {
+  if (appEntered) return;
+  appEntered = true;
+  isGuest = !currentUser;
+
+  document.getElementById('screen-auth').style.display = 'none';
+  document.getElementById('screen-app').style.display = 'block';
+  window.scrollTo(0,0);
+
+  const userEl = document.getElementById('nav-user');
+  const authBtn = document.getElementById('btn-auth-action');
+  if (currentUser) {
+    userEl.textContent = (currentUser.email||'').split('@')[0];
+    authBtn.textContent = '로그아웃'; authBtn.onclick = handleLogout;
+  } else {
+    userEl.textContent = 'Guest';
+    authBtn.textContent = '로그인'; authBtn.onclick = goToAuth;
+  }
+
+  document.getElementById('guest-banner').style.display = isGuest ? 'flex' : 'none';
+  document.getElementById('search-row').style.display = 'block';
+
+  portfolio = [];
+  if (currentUser && sb) await loadPortfolio();
+  renderTabs();
+  showView('welcome');
+  initSearch();
+
+  window.addEventListener('scroll', () => {
+    document.getElementById('app-nav')?.classList.toggle('scrolled', window.scrollY > 60);
+  }, {passive:true});
+
+  gsap.fromTo('#app-main', {opacity:0,y:18}, {opacity:1,y:0,duration:.65,ease:'power3.out'});
+}
+
+// ━━━ Portfolio ━━━
+async function loadPortfolio() {
+  const { data, error } = await sb.from('portfolios').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
+  if (!error && data) portfolio = data;
+}
+async function addToPortfolio(stock) {
+  if (isGuest) { selectStock(stock); return; }
+  if (portfolio.length >= 10) { alert('종목은 최대 10개까지 등록 가능합니다.'); return; }
+  const existing = portfolio.find(p=>p.ticker===stock.ticker);
+  if (existing) { selectStock(existing); return; }
+  try {
+    const { data, error } = await sb.from('portfolios').insert({user_id:currentUser.id,ticker:stock.ticker,name:stock.name,market:stock.market}).select().single();
+    if (!error && data) { portfolio.push(data); renderTabs(); selectStock(data); }
+    else selectStock(stock);
+  } catch(e) { selectStock(stock); }
+}
+async function removeFromPortfolio(id) {
+  if (!sb || !currentUser) return;
+  await sb.from('portfolios').delete().eq('id',id);
+  portfolio = portfolio.filter(p=>p.id!==id);
+  renderTabs();
+  if (currentStock?.id===id) { currentStock=null; showView('welcome'); }
+}
+
+// ━━━ Tabs ━━━
+function renderTabs() {
+  const c = document.getElementById('nav-tabs'); c.innerHTML='';
+  portfolio.forEach(s => {
+    const t = document.createElement('button');
+    t.className = 'nav-tab font-mono' + (currentStock?.ticker===s.ticker?' active':'');
+    t.textContent = s.ticker; t.title = s.name;
+    t.onclick = () => selectStock(s);
+    c.appendChild(t);
+  });
+  if (!isGuest && portfolio.length < 10) {
+    const a = document.createElement('button');
+    a.className = 'nav-tab add font-mono';
+    a.textContent = '+ 추가'; a.onclick = focusSearch;
+    c.appendChild(a);
+  }
+}
+function selectStock(stock) {
+  currentStock = stock;
+  document.getElementById('disp-ticker').textContent = stock.ticker;
+  document.getElementById('disp-name').textContent = stock.name;
+  document.getElementById('disp-market').textContent = stock.market==='KR'?'KRX · 한국거래소':'NYSE/NASDAQ · 미국시장';
+  document.getElementById('brief-area').innerHTML = '';
+  const btn = document.getElementById('btn-brief');
+  btn.disabled = false; btn.querySelector('.content').textContent = '인사이트 확인';
+  showView('stock'); renderTabs();
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// ━━━ Search ━━━
+function initSearch() {
+  if (searchInited) return; searchInited = true;
+  const inp = document.getElementById('search-input');
+  const dd = document.getElementById('search-dd');
+  inp.addEventListener('input', e => {
+    clearTimeout(searchTimer);
+    const q = e.target.value.trim();
+    if (!q) { dd.classList.remove('open'); dd.innerHTML=''; return; }
+    searchTimer = setTimeout(()=>doSearch(q), 260);
+  });
+  document.addEventListener('click', e => {
+    if (!e.target.closest('.search-wrap')) dd.classList.remove('open');
+  });
+}
+async function doSearch(q) {
+  const dd = document.getElementById('search-dd');
+  dd.innerHTML='<div class="dd-msg">검색 중...</div>'; dd.classList.add('open');
+  const results=[];
+  if (/[가-힣]/.test(q)) {
+    KR_STOCKS.filter(s=>s.name.includes(q)||s.ticker.includes(q)).slice(0,8).forEach(s=>results.push(s));
+  } else {
+    try {
+      const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const d=await r.json();
+      (d.result||[]).slice(0,6).forEach(s=>results.push({ticker:s.symbol,name:s.description,market:'US'}));
+    } catch(e){}
+    KR_STOCKS.filter(s=>s.ticker.startsWith(q.toUpperCase())||s.name.toUpperCase().includes(q.toUpperCase())).slice(0,3).forEach(s=>results.push(s));
+  }
+  if (!results.length) { dd.innerHTML='<div class="dd-msg">검색 결과 없음</div>'; return; }
+  dd.innerHTML='';
+  results.slice(0,8).forEach(stock=>{
+    const el=document.createElement('div'); el.className='dd-item';
+    el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker font-mono">${esc(stock.ticker)}</span><span class="dd-mkt font-mono">${stock.market==='KR'?'KRX':'US'}</span></div>`;
+    el.onclick=()=>{ document.getElementById('search-input').value=''; dd.classList.remove('open'); dd.innerHTML=''; addToPortfolio(stock); };
+    dd.appendChild(el);
+  });
+}
+function focusSearch() {
+  const el=document.getElementById('search-input'); if(!el) return;
+  el.scrollIntoView({behavior:'smooth',block:'center'});
+  setTimeout(()=>el.focus(),250);
+}
+
+// ━━━ Briefing ━━━
+async function fetchBriefing() {
+  if (!currentStock) return;
+  const btn=document.getElementById('btn-brief');
+  const area=document.getElementById('brief-area');
+  btn.disabled=true; btn.querySelector('.content').textContent='분석 중...';
+  const setStatus=msg=>{
+    area.innerHTML=`<div class="text-center py-16"><div class="loader"></div><div class="loading-label font-mono">${msg}</div></div>`;
+  };
+  try {
+    let articles=[];
+    if (currentStock.market==='KR') {
+      setStatus('네이버 뉴스 수집 중...');
+      const r=await fetch(`/api/naver?query=${encodeURIComponent(currentStock.name)}`);
+      const d=await r.json();
+      articles=(d.items||[]).map(a=>({title:a.title,description:a.description,url:a.originallink||a.link}));
+    } else {
+      setStatus('글로벌 뉴스 수집 중...');
+      const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(currentStock.ticker)}`);
+      const d=await r.json();
+      articles=(Array.isArray(d)?d:[]).map(a=>({title:a.headline,description:a.summary,url:a.url}));
+    }
+    if (!articles.length) {
+      area.innerHTML='<div class="text-center py-16"><p class="font-display italic" style="color:var(--muted);font-size:1.05rem;">최근 관련 뉴스를 찾을 수 없습니다</p></div>';
+      btn.querySelector('.content').textContent='다시 시도'; return;
+    }
+    setStatus(`AI 분석 진행 중 · ${articles.length}건`);
+    const gr=await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({ticker:currentStock.ticker,name:currentStock.name,articles,market:currentStock.market})});
+    const gd=await gr.json();
+    const analyses=gd.analyses||[];
+    if (!analyses.length) {
+      area.innerHTML='<div class="text-center py-16"><p class="font-display italic" style="color:var(--muted);font-size:1.05rem;">분석 결과를 생성할 수 없습니다</p></div>';
+      btn.querySelector('.content').textContent='다시 시도'; return;
+    }
+    if (currentUser && sb) {
+      sb.from('news_history').insert(analyses.map(a=>({user_id:currentUser.id,ticker:currentStock.ticker,title:a.title,summary:a.summary,sentiment:a.sentiment,impact_short:a.impact_short,impact_long:a.impact_long,url:a.url}))).then(({error})=>{if(error)console.warn('History:',error);});
+    }
+    renderBriefing(analyses);
+    btn.querySelector('.content').textContent='새로고침';
+  } catch(e) {
+    area.innerHTML=`<div class="text-center py-16"><p class="font-display italic" style="color:var(--muted);">오류: ${esc(e.message)}</p></div>`;
+    btn.querySelector('.content').textContent='다시 시도';
+  } finally { btn.disabled=false; }
+}
+
+function renderBriefing(list) {
+  const area=document.getElementById('brief-area');
+  const ts=new Date().toLocaleString('ko-KR',{month:'long',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const clsMap={호재:'up',악재:'down',중립:'flat'};
+  const iconMap={호재:'↑',악재:'↓',중립:'—'};
+  let html=`<div class="brief-meta font-mono"><div class="brief-dot"></div>인사이트 브리핑 · ${ts} · ${list.length}건 분석</div><div class="cards-grid">`;
+  list.forEach(item=>{
+    const cls=clsMap[item.sentiment]||'flat';
+    html+=`
+    <div class="news-card ${cls}">
+      <div class="card-head">
+        <span class="card-title">${esc(item.title)}</span>
+        ${item.url?`<a href="${esc(item.url)}" target="_blank" rel="noopener" class="card-link font-mono">원문 →</a>`:''}
+      </div>
+      <span class="sentiment ${cls} font-mono">${iconMap[item.sentiment]||'—'} ${esc(item.sentiment)}</span>
+      <div class="card-summary">${esc(item.summary)}</div>
+      <div class="impact-row">
+        <div class="impact">
+          <div class="impact-lbl font-mono">단기 전망 · 1–4주</div>
+          <div class="impact-val">${esc(item.impact_short)}</div>
+        </div>
+        <div class="impact">
+          <div class="impact-lbl font-mono">장기 전망 · 3개월+</div>
+          <div class="impact-val">${esc(item.impact_long)}</div>
+        </div>
+      </div>
+    </div>`;
+  });
+  html+='</div>';
+  if (currentUser && currentStock?.id) {
+    html+=`<button class="btn-remove font-mono" onclick="confirmRemove('${currentStock.id}')">관심 종목에서 제거</button>`;
+  }
+  area.innerHTML=html;
+  gsap.fromTo(area.querySelectorAll('.news-card'),
+    {opacity:0,y:20},{opacity:1,y:0,duration:.5,stagger:.08,ease:'power3.out'}
+  );
+}
+
+function confirmRemove(id) { if(confirm('이 종목을 포트폴리오에서 제거할까요?')) removeFromPortfolio(id); }
+function showView(name) {
+  document.getElementById('view-welcome').style.display = name==='welcome'?'block':'none';
+  document.getElementById('view-stock').style.display   = name==='stock'?'block':'none';
+}
+function esc(s) {
+  if(!s) return '';
+  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ━━━ Auth screen animation ━━━
+document.addEventListener('DOMContentLoaded', () => {
+  gsap.fromTo('.auth-inner',
+    {opacity:0,y:28},
+    {opacity:1,y:0,duration:1.1,ease:'power3.out',delay:.1}
+  );
+});
+
+initApp();
+</script>
+</body>
+</html>
