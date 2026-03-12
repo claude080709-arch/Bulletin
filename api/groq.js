@@ -61,7 +61,9 @@ ${articlesText}
   ]
 }`;
 
-  try {
+  const MODELS = ['llama-3.3-70b-versatile', 'llama-3.1-8b-instant'];
+
+  async function callGroq(model) {
     const r = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -69,18 +71,28 @@ ${articlesText}
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
+        model,
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
-        max_tokens: 8000,
+        max_tokens: 6000,
         response_format: { type: 'json_object' },
       }),
     });
-
     if (!r.ok) {
       const errData = await r.json().catch(() => ({}));
       throw new Error(`Groq API 오류 (${r.status}): ${errData.error?.message || '알 수 없는 오류'}`);
     }
+    return r;
+  }
+
+  try {
+    let r;
+    let lastErr;
+    for (const model of MODELS) {
+      try { r = await callGroq(model); break; }
+      catch (e) { lastErr = e; }
+    }
+    if (!r) throw lastErr;
     const data = await r.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error('Groq 응답 없음');

@@ -1622,8 +1622,8 @@ async function fetchBriefing() {
 
     const gr=await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({ticker:currentStock.ticker,name:currentStock.name,articles,market:currentStock.market})});
-    if (!gr.ok) throw new Error(`AI 분석 실패 (${gr.status})`);
-    const gd=await gr.json();
+    const gd=await gr.json().catch(()=>({}));
+    if (!gr.ok) throw new Error(gd.error || `AI 분석 실패 (${gr.status})`);
     const analyses=gd.analyses||[];
 
     if (!analyses.length) {
