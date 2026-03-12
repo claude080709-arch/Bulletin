@@ -81,7 +81,20 @@ ${articlesText}
     const data = await r.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) throw new Error('Groq 응답 없음');
-    const parsed = JSON.parse(content);
+
+    // 마크다운 코드블록 제거 (```json ... ``` 형태로 올 때 대비)
+    const cleaned = content
+      .replace(/^```json\s*/i, '')
+      .replace(/^```\s*/i, '')
+      .replace(/```\s*$/, '')
+      .trim();
+
+    let parsed;
+    try {
+      parsed = JSON.parse(cleaned);
+    } catch (parseErr) {
+      throw new Error(`JSON 파싱 실패: ${parseErr.message} / 원본: ${cleaned.slice(0, 200)}`);
+    }
     res.json(parsed);
   } catch (e) {
     res.status(500).json({ error: e.message, analyses: [] });
