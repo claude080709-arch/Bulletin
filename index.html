@@ -1221,7 +1221,7 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
             <span class="content fm">Get Insights</span>
           </button>
           <button class="btn-save-stock fm" id="btn-save-stock" style="display:none" onclick="saveCurrentStock()">＋ 포트폴리오 저장</button>
-          <button class="btn-remove-stock fm" id="btn-remove-stock" style="display:none" onclick="confirmRemove()">Remove</button>
+          <button class="btn-remove-stock fm" id="btn-remove-stock" style="display:none" onclick="confirmRemove()">✕ 포트폴리오 삭제</button>
         </div>
 
       </div>
@@ -1461,7 +1461,7 @@ async function removeFromPortfolio(id) {
   if (currentStock?.id===id) { currentStock=null; showView('welcome'); hideSummaryBox(); hideTopbar(); }
 }
 function confirmRemove() {
-  if (confirm('Remove this stock from your portfolio?')) removeFromPortfolio(currentStock.id);
+  if (confirm(`'${currentStock.name}' 을(를) 포트폴리오에서 삭제할까요?`)) removeFromPortfolio(currentStock.id);
 }
 
 // ━━━ Tabs ━━━
@@ -1483,13 +1483,13 @@ function renderTabs() {
   }
 }
 function selectStock(stock) {
-  currentStock = stock;
-  document.getElementById('disp-ticker').textContent = stock.market === 'KR' ? stock.name : stock.ticker;
-  document.getElementById('disp-name').textContent = stock.market === 'KR' ? stock.ticker : stock.name;
-  document.getElementById('disp-market').textContent = stock.market==='KR'?'KRX · Korea Exchange':'NYSE / NASDAQ';
-  document.getElementById('app-topbar').classList.add('visible');
-  // 이미 저장된 종목: Remove 버튼 / 미저장: 저장 버튼
+  // 이미 저장된 종목이면 id가 있는 포트폴리오 버전을 사용 (Remove 작동하려면 id 필요)
   const inPortfolio = portfolio.find(p => p.ticker === stock.ticker);
+  currentStock = inPortfolio || stock;
+  document.getElementById('disp-ticker').textContent = currentStock.market === 'KR' ? currentStock.name : currentStock.ticker;
+  document.getElementById('disp-name').textContent = currentStock.market === 'KR' ? currentStock.ticker : currentStock.name;
+  document.getElementById('disp-market').textContent = currentStock.market==='KR'?'KRX · Korea Exchange':'NYSE / NASDAQ';
+  document.getElementById('app-topbar').classList.add('visible');
   document.getElementById('btn-save-stock').style.display =
     (!isGuest && currentUser && !inPortfolio && portfolio.length < 10) ? 'inline-flex' : 'none';
   document.getElementById('btn-remove-stock').style.display =
