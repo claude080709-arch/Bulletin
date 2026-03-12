@@ -1656,22 +1656,27 @@ function renderSummaryBox(list) {
   const pillsEl = document.getElementById('summary-pills');
   const verdictEl = document.getElementById('summary-verdict');
 
-  const counts = { Bullish:0, Bearish:0, Neutral:0 };
-  list.forEach(a => { if (counts[a.sentiment] !== undefined) counts[a.sentiment]++; });
+  const counts = { '호재':0, '악재':0, '중립':0 };
+  list.forEach(a => {
+    const s = a.sentiment;
+    if (s === '호재' || s === 'Bullish') counts['호재']++;
+    else if (s === '악재' || s === 'Bearish') counts['악재']++;
+    else counts['중립']++;
+  });
 
-  const clsMap = { Bullish:'pos', Bearish:'neg', Neutral:'neu' };
-  const iconMap = { Bullish:'↑', Bearish:'↓', Neutral:'—' };
+  const clsMap = { '호재':'pos', '악재':'neg', '중립':'neu' };
+  const iconMap = { '호재':'↑', '악재':'↓', '중립':'—' };
   pillsEl.innerHTML = Object.entries(counts)
     .filter(([,v])=>v>0)
     .map(([k,v])=>`<span class="summary-pill ${clsMap[k]} fm">${iconMap[k]} ${k} ${v}</span>`)
     .join('');
 
   const total = list.length;
-  const pos = counts['Bullish'], neg = counts['Bearish'];
+  const pos = counts['호재'], neg = counts['악재'];
   let verdict = '';
-  if (pos > neg && pos >= total/2) verdict = `${pos} of ${total} signals are Bullish — overall positive momentum.`;
-  else if (neg > pos && neg >= total/2) verdict = `${neg} of ${total} signals are Bearish — short-term caution advised.`;
-  else verdict = `${pos} Bullish vs ${neg} Bearish — mixed signals.`;
+  if (pos > neg && pos >= total/2) verdict = `총 ${total}개 중 ${pos}개가 호재 — 전반적으로 긍정적인 흐름입니다.`;
+  else if (neg > pos && neg >= total/2) verdict = `총 ${total}개 중 ${neg}개가 악재 — 단기 주의가 필요합니다.`;
+  else verdict = `호재 ${pos}개 vs 악재 ${neg}개 — 혼조세입니다.`;
   verdictEl.textContent = verdict;
   box.classList.add('visible');
 }
@@ -1680,8 +1685,8 @@ function renderSummaryBox(list) {
 function renderBriefing(list) {
   const area = document.getElementById('brief-area');
   const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  const clsMap = {Bullish:'up',Bearish:'down',Neutral:'flat'};
-  const iconMap = {Bullish:'↑',Bearish:'↓',Neutral:'—'};
+  const clsMap = {'호재':'up','악재':'down','중립':'flat',Bullish:'up',Bearish:'down',Neutral:'flat'};
+  const iconMap = {'호재':'↑','악재':'↓','중립':'—',Bullish:'↑',Bearish:'↓',Neutral:'—'};
 
   let html = `
   <div class="brief-header">
