@@ -612,6 +612,14 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
   box-shadow: 0 8px 28px rgba(196,154,56,.35);
 }
 .btn-brief:disabled { opacity: .35; cursor: not-allowed; transform: none; }
+.btn-save-stock {
+  background: transparent; border: 1px solid rgba(196,154,56,.35);
+  color: var(--gold); cursor: pointer;
+  font-family: 'IBM Plex Mono', monospace; font-size: .78rem;
+  letter-spacing: .05em; padding: .6rem 1.1rem; border-radius: .5rem;
+  transition: all .15s; white-space: nowrap; display: inline-flex; align-items: center; gap: .4rem;
+}
+.btn-save-stock:hover { background: rgba(196,154,56,.12); border-color: var(--gold); }
 .btn-remove-stock {
   background: transparent; border: 1px solid rgba(232,228,220,.1);
   color: rgba(232,228,220,.3); cursor: pointer;
@@ -1212,6 +1220,7 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
             <span class="sh"></span>
             <span class="content fm">Get Insights</span>
           </button>
+          <button class="btn-save-stock fm" id="btn-save-stock" style="display:none" onclick="saveCurrentStock()">＋ 포트폴리오 저장</button>
           <button class="btn-remove-stock fm" id="btn-remove-stock" style="display:none" onclick="confirmRemove()">Remove</button>
         </div>
 
@@ -1430,8 +1439,8 @@ async function loadPortfolio() {
   if (!error && data) portfolio = data;
 }
 async function addToPortfolio(stock) {
-  if (isGuest) { selectStock(stock); return; }
-  if (portfolio.length >= 10) { alert('You can track up to 10 stocks.'); return; }
+  if (isGuest) return;
+  if (portfolio.length >= 10) { alert('최대 10개까지 저장할 수 있습니다.'); return; }
   const existing = portfolio.find(p=>p.ticker===stock.ticker);
   if (existing) { selectStock(existing); return; }
   try {
@@ -1440,9 +1449,8 @@ async function addToPortfolio(stock) {
     else {
       if (error?.code === '42P01') alert('Supabase 테이블이 없습니다. setup.sql을 실행해 주세요.');
       else console.error('Portfolio save failed:', error?.message);
-      selectStock(stock);
     }
-  } catch(e) { console.error('Portfolio save error:', e.message); selectStock(stock); }
+  } catch(e) { console.error('Portfolio save error:', e.message); }
 }
 async function removeFromPortfolio(id) {
   if (!sb || !currentUser) return;
@@ -1479,8 +1487,12 @@ function selectStock(stock) {
   document.getElementById('disp-name').textContent = stock.name;
   document.getElementById('disp-market').textContent = stock.market==='KR'?'KRX · Korea Exchange':'NYSE / NASDAQ';
   document.getElementById('app-topbar').classList.add('visible');
-  const removeBtn = document.getElementById('btn-remove-stock');
-  removeBtn.style.display = (currentUser && stock.id) ? 'inline-flex' : 'none';
+  // 이미 저장된 종목: Remove 버튼 / 미저장: 저장 버튼
+  const inPortfolio = portfolio.find(p => p.ticker === stock.ticker);
+  document.getElementById('btn-save-stock').style.display =
+    (!isGuest && currentUser && !inPortfolio && portfolio.length < 10) ? 'inline-flex' : 'none';
+  document.getElementById('btn-remove-stock').style.display =
+    (currentUser && inPortfolio) ? 'inline-flex' : 'none';
   const btn = document.getElementById('btn-brief');
   btn.disabled = false; btn.querySelector('.content').textContent = 'Get Insights';
   document.getElementById('brief-area').innerHTML = '';
@@ -1488,6 +1500,13 @@ function selectStock(stock) {
   showView('stock');
   renderTabs();
   window.scrollTo({top:0,behavior:'smooth'});
+}
+async function saveCurrentStock() {
+  if (!currentStock) return;
+  const saveBtn = document.getElementById('btn-save-stock');
+  saveBtn.textContent = '저장 중...'; saveBtn.disabled = true;
+  await addToPortfolio(currentStock);
+  saveBtn.disabled = false;
 }
 function hideTopbar() { document.getElementById('app-topbar').classList.remove('visible'); }
 function hideSummaryBox() { document.getElementById('summary-box').classList.remove('visible'); }
@@ -1569,7 +1588,7 @@ async function doSearch(q, inputEl, dd) {
     el.onclick=()=>{
       if(inputEl) inputEl.value='';
       dd.classList.remove('open'); dd.innerHTML='';
-      addToPortfolio(stock);
+      selectStock(stock);
     };
     dd.appendChild(el);
   });
