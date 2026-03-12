@@ -1,3 +1,12 @@
+function checkAuth(req, res) {
+  const secret = process.env.API_SECRET;
+  if (secret && req.headers['x-api-key'] !== secret) {
+    res.status(401).json({ error: 'Unauthorized', analyses: [] });
+    return false;
+  }
+  return true;
+}
+
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -8,6 +17,7 @@ export default async function handler(req, res) {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
+  if (!checkAuth(req, res)) return;
 
   if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not configured', analyses: [] });
 

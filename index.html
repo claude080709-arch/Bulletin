@@ -863,20 +863,76 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
 }
 .card-link:hover { color: var(--gold); }
 
+/* ── 주가 표시 ── */
+.topbar-price {
+  display: none; flex-direction: column; align-items: flex-end;
+  flex-shrink: 0; border-left: 1px solid var(--border); padding-left: 1.5rem;
+}
+.price-val {
+  font-family: 'IBM Plex Mono', monospace; font-size: 1.4rem;
+  color: var(--text); font-weight: 500; line-height: 1.2;
+}
+.price-chg { font-family: 'IBM Plex Mono', monospace; font-size: .8rem; margin-top: .15rem; }
+.price-chg.pos { color: var(--positive); }
+.price-chg.neg { color: var(--negative); }
+
+/* ── 포트폴리오 요약 (홈화면) ── */
+#portfolio-summary { width: 100%; margin-top: 2rem; }
+.ps-header {
+  display: flex; align-items: baseline; gap: .75rem; margin-bottom: .85rem;
+}
+.ps-label {
+  font-family: 'IBM Plex Mono', monospace; font-size: .75rem;
+  letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
+}
+.ps-sublabel {
+  font-family: 'IBM Plex Mono', monospace; font-size: .7rem;
+  color: rgba(232,228,220,.2); letter-spacing: .04em;
+}
+.portfolio-summary-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .65rem;
+}
+.ps-item {
+  background: var(--surface); border: 1px solid var(--border);
+  border-radius: 1rem; padding: 1rem 1.1rem; cursor: pointer;
+  transition: border-color .15s, background .15s;
+}
+.ps-item:hover { border-color: var(--border-gold); background: rgba(201,169,98,.04); }
+.ps-ticker { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 600; font-style: italic; color: var(--text); margin-bottom: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ps-name { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: rgba(232,228,220,.3); margin-bottom: .55rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ps-badge {
+  font-family: 'IBM Plex Mono', monospace; font-size: .7rem;
+  padding: .22rem .65rem; border-radius: 9999px; font-weight: 600;
+  display: inline-block;
+}
+.ps-badge.pos { background: rgba(76,175,125,.22); color: #5CE89A; border: 1px solid rgba(76,175,125,.5); }
+.ps-badge.neg { background: rgba(217,95,95,.22); color: #FF6B6B; border: 1px solid rgba(217,95,95,.5); }
+.ps-badge.neu { background: rgba(201,169,98,.18); color: #E0C070; border: 1px solid rgba(201,169,98,.4); }
+.ps-unanalyzed { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: rgba(232,228,220,.18); }
+
+/* 캐시 표시 */
+.cache-notice {
+  font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
+  color: rgba(201,169,98,.5); letter-spacing: .04em;
+}
+
 /* ── Mobile ── */
 @media (max-width: 960px) {
   .app-topbar { padding: .85rem 1.25rem; }
   .topbar-inner { gap: .75rem; flex-wrap: wrap; }
   .topbar-search { flex: 0 0 100%; order: 1; }
-  .topbar-stock { border-left: none; padding-left: 0; order: 2; }
-  .topbar-actions { order: 3; }
+  .topbar-stock { border-left: none; padding-left: 0; order: 2; flex: 1; }
+  .topbar-price { border-left: none; padding-left: 0; }
+  .topbar-actions { order: 3; flex-wrap: wrap; }
   .topbar-ticker { font-size: 1.8rem; }
   .impact-row { grid-template-columns: 1fr; }
   .nav-user { display: none; }
   .app-nav { padding: 0 1.25rem; height: 72px; }
   .welcome-hints { grid-template-columns: 1fr; }
+  .welcome-content { padding: 4rem 1.5rem 3rem; }
   .app-content-inner { padding: 1.5rem 1.25rem 4rem; }
   #screen-auth nav { padding: 1.25rem; }
+  .portfolio-summary-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
 }
 </style>
 </head>
@@ -1213,6 +1269,12 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
           </div>
         </div>
 
+        <!-- 주가 표시 (US만) -->
+        <div class="topbar-price" id="topbar-price">
+          <span class="price-val fm" id="price-val">—</span>
+          <span class="price-chg fm" id="price-chg">—</span>
+        </div>
+
         <!-- Actions -->
         <div class="topbar-actions">
           <button id="guest-banner" class="topbar-guest" style="display:none" onclick="goToAuth()">Guest · Sign In →</button>
@@ -1253,6 +1315,13 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
           <div class="welcome-divider"></div>
           <p class="welcome-desc">Search for a stock above to get AI-powered news briefings — Bullish, Bearish, or Neutral signals with short and long-term impact.</p>
           <p id="guest-notice" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(201,169,98,.6);letter-spacing:.04em;margin-top:-.5rem;margin-bottom:-.5rem;">게스트 모드: 검색 기록은 새로고침 시 초기화됩니다. 저장하려면 로그인하세요.</p>
+          <div id="portfolio-summary" style="display:none;">
+            <div class="ps-header">
+              <span class="ps-label fm">내 포트폴리오</span>
+              <span class="ps-sublabel fm" id="ps-sublabel"></span>
+            </div>
+            <div class="portfolio-summary-grid" id="portfolio-summary-grid"></div>
+          </div>
           <div class="welcome-hints">
             <div class="welcome-hint">
               <div class="hint-icon">
@@ -1307,6 +1376,17 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
 let sb = null, currentUser = null, isGuest = false;
 let portfolio = [], currentStock = null;
 let searchTimer = null, searchTimerW = null, appEntered = false, searchInited = false;
+let apiSecret = '';
+const briefCache = new Map(); // ticker → { analyses, ts }
+const priceCache = new Map(); // ticker → { data, ts }
+const BRIEF_TTL = 60 * 60 * 1000; // 1시간
+const PRICE_TTL = 5 * 60 * 1000;  // 5분
+
+function apiHeaders(extra = {}) {
+  const h = { ...extra };
+  if (apiSecret) h['X-Api-Key'] = apiSecret;
+  return h;
+}
 
 const KR_STOCKS = [
   {ticker:'005930',name:'삼성전자',market:'KR'},{ticker:'000660',name:'SK하이닉스',market:'KR'},
@@ -1366,6 +1446,7 @@ async function initApp() {
   try {
     const res = await fetch('/api/config');
     const cfg = await res.json();
+    apiSecret = cfg.apiSecret || '';
     sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
     const { data:{ session } } = await sb.auth.getSession();
     if (session?.user) { currentUser = session.user; enterApp(); return; }
@@ -1423,6 +1504,7 @@ async function enterApp() {
   portfolio = [];
   if (currentUser && sb) await loadPortfolio();
   renderTabs();
+  renderPortfolioSummary();
   showView('welcome');
   initSearch();
 
@@ -1478,10 +1560,11 @@ function renderTabs() {
   if (!isGuest && portfolio.length < 10) {
     const a = document.createElement('button');
     a.className = 'nav-tab add fm';
-    a.textContent = '+ Add'; a.onclick = focusSearch;
+    a.textContent = '+ 추가'; a.onclick = focusSearch;
     c.appendChild(a);
   }
 }
+
 function selectStock(stock) {
   // 이미 저장된 종목이면 id가 있는 포트폴리오 버전을 사용 (Remove 작동하려면 id 필요)
   const inPortfolio = portfolio.find(p => p.ticker === stock.ticker);
@@ -1495,11 +1578,12 @@ function selectStock(stock) {
   document.getElementById('btn-remove-stock').style.display =
     (currentUser && inPortfolio) ? 'inline-flex' : 'none';
   const btn = document.getElementById('btn-brief');
-  btn.disabled = false; btn.querySelector('.content').textContent = 'Get Insights';
+  btn.disabled = false; btn.querySelector('.content').textContent = 'AI 분석';
   document.getElementById('brief-area').innerHTML = '';
   hideSummaryBox();
   showView('stock');
   renderTabs();
+  fetchPrice(currentStock.ticker, currentStock.market);
   window.scrollTo({top:0,behavior:'smooth'});
 }
 async function saveCurrentStock() {
@@ -1511,6 +1595,39 @@ async function saveCurrentStock() {
 }
 function hideTopbar() { document.getElementById('app-topbar').classList.remove('visible'); }
 function hideSummaryBox() { document.getElementById('summary-box').classList.remove('visible'); }
+
+// ━━━ 주가 조회 (US만) ━━━
+async function fetchPrice(ticker, market) {
+  const priceEl = document.getElementById('topbar-price');
+  if (market === 'KR') { if (priceEl) priceEl.style.display = 'none'; return; }
+
+  const cached = priceCache.get(ticker);
+  if (cached && Date.now() - cached.ts < PRICE_TTL) {
+    displayPrice(cached.data);
+    return;
+  }
+  try {
+    const r = await fetch(`/api/finnhub?symbol=${encodeURIComponent(ticker)}&type=quote`, { headers: apiHeaders() });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (d && d.c) {
+      const data = { current: d.c, change: d.d || 0, changePct: d.dp || 0 };
+      priceCache.set(ticker, { data, ts: Date.now() });
+      displayPrice(data);
+    }
+  } catch(e) {}
+}
+function displayPrice(data) {
+  const priceEl = document.getElementById('topbar-price');
+  const valEl = document.getElementById('price-val');
+  const chgEl = document.getElementById('price-chg');
+  if (!priceEl) return;
+  valEl.textContent = `$${data.current.toFixed(2)}`;
+  const isPos = data.change >= 0;
+  chgEl.textContent = `${isPos ? '+' : ''}${data.change.toFixed(2)} (${isPos ? '+' : ''}${data.changePct.toFixed(2)}%)`;
+  chgEl.className = 'price-chg fm ' + (isPos ? 'pos' : 'neg');
+  priceEl.style.display = 'flex';
+}
 
 // ━━━ Search ━━━
 function initSearch() {
@@ -1546,7 +1663,7 @@ function initSearch() {
   }
 }
 async function doSearch(q, inputEl, dd) {
-  dd.innerHTML='<div class="dd-msg">Searching...</div>'; dd.classList.add('open');
+  dd.innerHTML='<div class="dd-msg">검색 중...</div>'; dd.classList.add('open');
   const results=[];
   const qu = q.toUpperCase();
 
@@ -1562,7 +1679,7 @@ async function doSearch(q, inputEl, dd) {
 
     // Finnhub API 병행 호출
     try {
-      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`);
+      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { headers: apiHeaders() });
       if (r.ok) {
         const d = await r.json();
         (d.result||[]).forEach(s=>{
@@ -1581,7 +1698,7 @@ async function doSearch(q, inputEl, dd) {
     });
   }
 
-  if (!results.length) { dd.innerHTML='<div class="dd-msg">No results found</div>'; return; }
+  if (!results.length) { dd.innerHTML='<div class="dd-msg">검색 결과 없음</div>'; return; }
   dd.innerHTML='';
   results.slice(0,8).forEach(stock=>{
     const el=document.createElement('div'); el.className='dd-item';
@@ -1610,7 +1727,18 @@ async function fetchBriefing() {
   if (!currentStock) return;
   const btn=document.getElementById('btn-brief');
   const area=document.getElementById('brief-area');
-  btn.disabled=true; btn.querySelector('.content').textContent='Analyzing...';
+
+  // 캐시 확인
+  const cacheKey = currentStock.ticker;
+  const cached = briefCache.get(cacheKey);
+  if (cached && Date.now() - cached.ts < BRIEF_TTL) {
+    renderBriefing(cached.analyses, cached.ts);
+    renderSummaryBox(cached.analyses);
+    btn.querySelector('.content').textContent = '새로고침';
+    return;
+  }
+
+  btn.disabled=true; btn.querySelector('.content').textContent='분석 중...';
   hideSummaryBox();
 
   const setStatus=msg=>{
@@ -1620,27 +1748,27 @@ async function fetchBriefing() {
   try {
     let articles=[];
     if (currentStock.market==='KR') {
-      setStatus('Fetching news...');
-      const r=await fetch(`/api/naver?query=${encodeURIComponent(currentStock.name)}`);
+      setStatus('뉴스 수집 중...');
+      const r=await fetch(`/api/naver?query=${encodeURIComponent(currentStock.name)}`, { headers: apiHeaders() });
       if (!r.ok) throw new Error(`뉴스 조회 실패 (${r.status})`);
       const d=await r.json();
       articles=(d.items||[]).map(a=>({title:a.title,description:a.description,url:a.originallink||a.link}));
     } else {
-      setStatus('Fetching news...');
-      const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(currentStock.ticker)}`);
+      setStatus('뉴스 수집 중...');
+      const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(currentStock.ticker)}`, { headers: apiHeaders() });
       if (!r.ok) throw new Error(`뉴스 조회 실패 (${r.status})`);
       const d=await r.json();
       articles=(Array.isArray(d)?d:[]).map(a=>({title:a.headline,description:a.summary,url:a.url}));
     }
 
     if (!articles.length) {
-      area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">No recent news found</p></div>`;
-      btn.querySelector('.content').textContent='Retry'; return;
+      area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">최근 뉴스가 없습니다</p></div>`;
+      btn.querySelector('.content').textContent='다시 시도'; return;
     }
 
-    setStatus(`Analyzing ${articles.length} articles...`);
+    setStatus(`${articles.length}개 기사 분석 중...`);
 
-    const gr=await fetch('/api/groq',{method:'POST',headers:{'Content-Type':'application/json'},
+    const gr=await fetch('/api/groq',{method:'POST',headers: apiHeaders({'Content-Type':'application/json'}),
       body:JSON.stringify({ticker:currentStock.ticker,name:currentStock.name,articles,market:currentStock.market})});
     const gd=await gr.json().catch(()=>({}));
     if (!gr.ok) throw new Error(gd.error || `AI 분석 실패 (${gr.status})`);
@@ -1649,8 +1777,13 @@ async function fetchBriefing() {
     if (!analyses.length) {
       const errMsg = gd.error ? `분석 실패: ${gd.error}` : '관련 뉴스를 찾지 못했습니다.';
       area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">${esc(errMsg)}</p></div>`;
-      btn.querySelector('.content').textContent='Retry'; return;
+      btn.querySelector('.content').textContent='다시 시도'; return;
     }
+
+    // 캐시 저장
+    const now = Date.now();
+    briefCache.set(cacheKey, { analyses, ts: now });
+    renderPortfolioSummary();
 
     if (currentUser && sb) {
       sb.from('news_history').insert(analyses.map(a=>({
@@ -1660,13 +1793,13 @@ async function fetchBriefing() {
       }))).then(({error})=>{if(error)console.warn('History:',error);});
     }
 
-    renderBriefing(analyses);
+    renderBriefing(analyses, now);
     renderSummaryBox(analyses);
-    btn.querySelector('.content').textContent='Refresh';
+    btn.querySelector('.content').textContent='새로고침';
 
   } catch(e) {
-    area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;color:var(--muted);">Error: ${esc(e.message)}</p></div>`;
-    btn.querySelector('.content').textContent='Retry';
+    area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;color:var(--muted);">오류: ${esc(e.message)}</p></div>`;
+    btn.querySelector('.content').textContent='다시 시도';
   } finally { btn.disabled=false; }
 }
 
@@ -1702,16 +1835,17 @@ function renderSummaryBox(list) {
 }
 
 // ━━━ Render Cards ━━━
-function renderBriefing(list) {
+function renderBriefing(list, cacheTs) {
   const area = document.getElementById('brief-area');
-  const ts = new Date().toLocaleString('en-US',{month:'short',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const ts = new Date(cacheTs || Date.now()).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const isCached = cacheTs && (Date.now() - cacheTs) > 5000;
   const clsMap = {'호재':'up','악재':'down','중립':'flat',Bullish:'up',Bearish:'down',Neutral:'flat'};
   const iconMap = {'호재':'↑','악재':'↓','중립':'—',Bullish:'↑',Bearish:'↓',Neutral:'—'};
 
   let html = `
   <div class="brief-header">
-    <div class="brief-meta fm"><div class="brief-dot"></div>Insight Briefing · ${ts}</div>
-    <div class="brief-count fm">${list.length} article${list.length !== 1 ? 's' : ''} analyzed</div>
+    <div class="brief-meta fm"><div class="brief-dot"></div>분석 브리핑 · ${ts}${isCached ? ' <span class="cache-notice">(캐시됨)</span>' : ''}</div>
+    <div class="brief-count fm">${list.length}개 기사 분석</div>
   </div>
   <div class="cards-grid">`;
   list.forEach((item, i) => {
@@ -1724,7 +1858,7 @@ function renderBriefing(list) {
       <div class="card-head" onclick="toggleCard(${i})">
         <div class="card-top-row">
           <span class="card-title">${esc(item.title)}</span>
-          <span class="card-toggle fm" id="toggle-${i}">Details ↓</span>
+          <span class="card-toggle fm" id="toggle-${i}">상세 ↓</span>
         </div>
         <div class="card-verdict-row">
           <span class="sentiment-badge ${cls} fm">${icon} ${esc(item.sentiment)}</span>
@@ -1735,15 +1869,15 @@ function renderBriefing(list) {
         <div class="card-summary-text">${esc(item.summary)}</div>
         <div class="impact-row">
           <div class="impact">
-            <div class="impact-lbl fm">Short-term · 1–4 weeks</div>
+            <div class="impact-lbl fm">단기 · 1-4주</div>
             <div class="impact-val">${esc(item.impact_short)}</div>
           </div>
           <div class="impact">
-            <div class="impact-lbl fm">Long-term · 3 months+</div>
+            <div class="impact-lbl fm">장기 · 3개월+</div>
             <div class="impact-val">${esc(item.impact_long)}</div>
           </div>
         </div>
-        ${safeUrl(item.url) ? `<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">Read original →</a></div>` : ''}
+        ${safeUrl(item.url) ? `<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">원문 보기 →</a></div>` : ''}
       </div>
     </div>`;
   });
@@ -1768,7 +1902,47 @@ function toggleCard(i) {
   const toggle = document.getElementById(`toggle-${i}`);
   const isOpen = detail.classList.contains('open');
   detail.classList.toggle('open', !isOpen);
-  toggle.textContent = isOpen ? 'Details ↓' : 'Collapse ↑';
+  toggle.textContent = isOpen ? '상세 ↓' : '접기 ↑';
+}
+
+// ━━━ 포트폴리오 요약 ━━━
+function renderPortfolioSummary() {
+  const el = document.getElementById('portfolio-summary');
+  const grid = document.getElementById('portfolio-summary-grid');
+  const sublabel = document.getElementById('ps-sublabel');
+  if (!el || !grid) return;
+  if (isGuest || portfolio.length === 0) { el.style.display = 'none'; return; }
+
+  el.style.display = 'block';
+  const analyzed = portfolio.filter(s => briefCache.has(s.ticker)).length;
+  if (sublabel) sublabel.textContent = analyzed > 0 ? `${analyzed}/${portfolio.length}개 분석됨` : '';
+
+  grid.innerHTML = '';
+  portfolio.forEach(s => {
+    const cached = briefCache.get(s.ticker);
+    const item = document.createElement('div');
+    item.className = 'ps-item';
+    item.onclick = () => selectStock(s);
+
+    let badgeHtml = '<span class="ps-unanalyzed">미분석</span>';
+    if (cached) {
+      const counts = { '호재': 0, '악재': 0, '중립': 0 };
+      cached.analyses.forEach(a => {
+        if (a.sentiment === '호재' || a.sentiment === 'Bullish') counts['호재']++;
+        else if (a.sentiment === '악재' || a.sentiment === 'Bearish') counts['악재']++;
+        else counts['중립']++;
+      });
+      const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
+      const cls = { '호재':'pos', '악재':'neg', '중립':'neu' }[top[0]];
+      badgeHtml = `<span class="ps-badge ${cls} fm">${top[0]}</span>`;
+    }
+
+    item.innerHTML = `
+      <div class="ps-ticker fd">${esc(s.market==='KR' ? s.name : s.ticker)}</div>
+      <div class="ps-name fm">${esc(s.market==='KR' ? s.ticker : s.name)}</div>
+      ${badgeHtml}`;
+    grid.appendChild(item);
+  });
 }
 
 function goHome() {

@@ -1,5 +1,16 @@
+function checkAuth(req, res) {
+  const secret = process.env.API_SECRET;
+  if (secret && req.headers['x-api-key'] !== secret) {
+    res.status(401).json({ error: 'Unauthorized' });
+    return false;
+  }
+  return true;
+}
+
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
+  if (!checkAuth(req, res)) return;
+
   const { query } = req.query;
   if (!query) return res.json({ items: [] });
   if (!process.env.NAVER_CLIENT_ID || !process.env.NAVER_CLIENT_SECRET) return res.status(500).json({ error: 'Naver API credentials not configured', items: [] });
