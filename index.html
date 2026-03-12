@@ -1470,7 +1470,8 @@ function renderTabs() {
   portfolio.forEach(s => {
     const t = document.createElement('button');
     t.className = 'nav-tab fm' + (currentStock?.ticker===s.ticker?' active':'');
-    t.textContent = s.ticker; t.title = s.name;
+    t.textContent = s.market === 'KR' ? s.name : s.ticker;
+    t.title = s.market === 'KR' ? `${s.name} (${s.ticker})` : s.name;
     t.onclick = () => selectStock(s);
     c.appendChild(t);
   });
@@ -1483,8 +1484,8 @@ function renderTabs() {
 }
 function selectStock(stock) {
   currentStock = stock;
-  document.getElementById('disp-ticker').textContent = stock.ticker;
-  document.getElementById('disp-name').textContent = stock.name;
+  document.getElementById('disp-ticker').textContent = stock.market === 'KR' ? stock.name : stock.ticker;
+  document.getElementById('disp-name').textContent = stock.market === 'KR' ? stock.ticker : stock.name;
   document.getElementById('disp-market').textContent = stock.market==='KR'?'KRX · Korea Exchange':'NYSE / NASDAQ';
   document.getElementById('app-topbar').classList.add('visible');
   // 이미 저장된 종목: Remove 버튼 / 미저장: 저장 버튼
