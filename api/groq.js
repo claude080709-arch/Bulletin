@@ -11,8 +11,11 @@ export default async function handler(req, res) {
 
   if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not configured', analyses: [] });
 
-  const { ticker, name, articles, market } = req.body;
+  const { ticker, name, market } = req.body;
+  let { articles } = req.body;
   if (!articles || articles.length === 0) return res.json({ analyses: [] });
+  // 기사 최대 20개 제한 (초과 시 응답 JSON이 잘려서 파싱 오류 발생)
+  articles = articles.slice(0, 20);
 
   const clean = (str) =>
     str
@@ -69,7 +72,7 @@ ${articlesText}
         model: 'llama-3.3-70b-versatile',
         messages: [{ role: 'user', content: prompt }],
         temperature: 0.2,
-        max_tokens: 6000,
+        max_tokens: 8000,
         response_format: { type: 'json_object' },
       }),
     });
