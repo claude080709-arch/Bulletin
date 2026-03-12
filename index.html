@@ -1301,7 +1301,7 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
             <span class="welcome-search-label fm">Stock Search</span>
             <div class="welcome-search-field">
               <input id="welcome-search-input" class="welcome-search-input" type="text"
-                placeholder="Search by name or ticker — e.g. 삼성전자, AAPL, QQQ" autocomplete="off"/>
+                placeholder="종목명 또는 티커 검색 — 예: 삼성전자, AAPL, QQQ" autocomplete="off"/>
               <svg class="welcome-search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
               <div class="welcome-search-dd search-dd" id="welcome-search-dd"></div>
             </div>
@@ -1313,7 +1313,7 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
           <div class="welcome-label fm">AI-Powered Analysis</div>
           <h2 class="welcome-title fd">Deeper intelligence<br>for your portfolio</h2>
           <div class="welcome-divider"></div>
-          <p class="welcome-desc">Search for a stock above to get AI-powered news briefings — Bullish, Bearish, or Neutral signals with short and long-term impact.</p>
+          <p class="welcome-desc">위 검색창에서 종목을 찾아 AI 뉴스 분석을 받아보세요 — 호재·악재·중립 시그널과 단기·장기 영향을 한눈에 확인하세요.</p>
           <p id="guest-notice" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(201,169,98,.6);letter-spacing:.04em;margin-top:-.5rem;margin-bottom:-.5rem;">게스트 모드: 검색 기록은 새로고침 시 초기화됩니다. 저장하려면 로그인하세요.</p>
           <div id="portfolio-summary" style="display:none;">
             <div class="ps-header">
@@ -1327,22 +1327,22 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
               <div class="hint-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><polyline points="4,8 8,12 12,8 16,12 20,8"/></svg>
               </div>
-              <div class="hint-title fm">Live News</div>
-              <div class="hint-desc">All recent articles from KRX and US markets, no fixed limit</div>
+              <div class="hint-title fm">실시간 뉴스</div>
+              <div class="hint-desc">KRX·미국 시장 최신 기사를 수량 제한 없이 수집</div>
             </div>
             <div class="welcome-hint">
               <div class="hint-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
               </div>
-              <div class="hint-title fm">AI Analysis</div>
-              <div class="hint-desc">LLaMA 3.3 classifies each signal and filters irrelevant noise</div>
+              <div class="hint-title fm">AI 분석</div>
+              <div class="hint-desc">LLaMA 3.3이 각 시그널을 분류하고 노이즈를 걸러냅니다</div>
             </div>
             <div class="welcome-hint">
               <div class="hint-icon">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
               </div>
-              <div class="hint-title fm">Two Horizons</div>
-              <div class="hint-desc">Short-term 1–4 weeks + long-term 3 months+ per article</div>
+              <div class="hint-title fm">두 가지 시각</div>
+              <div class="hint-desc">기사별 단기(1–4주) + 장기(3개월+) 영향 동시 분석</div>
             </div>
           </div>
         </div>
@@ -1354,12 +1354,16 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
         <div class="app-content-inner">
           <div id="summary-box" class="summary-box">
             <div class="summary-head">
-              <div class="summary-label fm">Signal Summary</div>
+              <div class="summary-label fm">시그널 요약</div>
             </div>
             <div class="summary-body">
               <div class="summary-pills" id="summary-pills"></div>
               <div class="summary-verdict" id="summary-verdict"></div>
             </div>
+          </div>
+          <div id="brief-empty-hint" style="display:flex;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem;gap:0.75rem;opacity:0.45;">
+            <div style="font-size:2rem;">📰</div>
+            <div class="fm" style="font-size:0.9rem;letter-spacing:0.05em;">AI 분석 버튼을 눌러 뉴스를 불러오세요</div>
           </div>
           <div id="brief-area"></div>
         </div>
@@ -1580,6 +1584,8 @@ function selectStock(stock) {
   const btn = document.getElementById('btn-brief');
   btn.disabled = false; btn.querySelector('.content').textContent = 'AI 분석';
   document.getElementById('brief-area').innerHTML = '';
+  const hint = document.getElementById('brief-empty-hint');
+  if (hint) hint.style.display = 'flex';
   hideSummaryBox();
   showView('stock');
   renderTabs();
@@ -1836,6 +1842,8 @@ function renderSummaryBox(list) {
 
 // ━━━ Render Cards ━━━
 function renderBriefing(list, cacheTs) {
+  const hint = document.getElementById('brief-empty-hint');
+  if (hint) hint.style.display = 'none';
   const area = document.getElementById('brief-area');
   const ts = new Date(cacheTs || Date.now()).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
   const isCached = cacheTs && (Date.now() - cacheTs) > 5000;
