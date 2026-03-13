@@ -1277,10 +1277,10 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
 
         <!-- Actions -->
         <div class="topbar-actions">
-          <button id="guest-banner" class="topbar-guest" style="display:none" onclick="goToAuth()">Guest · Sign In →</button>
+          <button id="guest-banner" class="topbar-guest" style="display:none" onclick="goToAuth()">게스트 · 로그인 →</button>
           <button class="btn-brief" id="btn-brief" onclick="fetchBriefing()">
             <span class="sh"></span>
-            <span class="content fm">Get Insights</span>
+            <span class="content fm">AI 분석</span>
           </button>
           <button class="btn-save-stock fm" id="btn-save-stock" style="display:none" onclick="saveCurrentStock()">＋ 포트폴리오 저장</button>
           <button class="btn-remove-stock fm" id="btn-remove-stock" style="display:none" onclick="confirmRemove()">✕ 포트폴리오 삭제</button>
@@ -1494,10 +1494,10 @@ async function enterApp() {
   const authBtn = document.getElementById('btn-auth-action');
   if (currentUser) {
     userEl.textContent = (currentUser.email||'').split('@')[0];
-    authBtn.textContent = 'Sign Out'; authBtn.onclick = handleLogout;
+    authBtn.textContent = '로그아웃'; authBtn.onclick = handleLogout;
   } else {
-    userEl.textContent = 'Guest';
-    authBtn.textContent = 'Sign In'; authBtn.onclick = goToAuth;
+    userEl.textContent = '게스트';
+    authBtn.textContent = '로그인'; authBtn.onclick = goToAuth;
   }
 
   const guestBtn = document.getElementById('guest-banner');
