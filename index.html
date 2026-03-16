@@ -764,14 +764,20 @@ async function createGroup(name){
 }
 async function deleteGroup(id){
   if(!currentUser||!sb)return;
-  await sb.from('portfolios').update({group_id:null}).eq('group_id',id).eq('user_id',currentUser.id);
+  const grp=groups.find(g=>g.id===id);
+  const{error:updateErr}=await sb.from('portfolios').update({group_id:null}).eq('group_id',id).eq('user_id',currentUser.id);
+  if(updateErr){showToast('그룹 삭제에 실패했습니다');return;}
   const{error}=await sb.from('watchlist_groups').delete().eq('id',id);
   if(!error){
+    const movedCount=portfolio.filter(p=>p.group_id===id).length;
     groups=groups.filter(g=>g.id!==id);
     portfolio.forEach(p=>{if(p.group_id===id)p.group_id=null;});
     renderWatchlistPanel();renderWatchlistSummary();
-    showToast('그룹이 삭제됐습니다');
-  }
+    const msg=movedCount>0
+      ?`'${grp?.name||'그룹'}' 삭제됨 · ${movedCount}개 종목이 기타로 이동됐습니다`
+      :`'${grp?.name||'그룹'}' 그룹이 삭제됐습니다`;
+    showToast(msg);
+  }else{showToast('그룹 삭제에 실패했습니다');}
 }
 
 // ━━━ Panel UI ━━━
