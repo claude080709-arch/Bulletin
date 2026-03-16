@@ -4,953 +4,353 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Bulletin — Portfolio Intelligence</title>
-
-<!-- Fonts: DEJA VU used Inter + Playfair. We keep those + add IBM Plex Mono for app. -->
 <link rel="preconnect" href="https://fonts.bunny.net">
 <link href="https://fonts.bunny.net/css?family=inter:300,400,500|playfair-display:400,400i,500,600,600i,700|ibm-plex-mono:400,500|cormorant-garamond:400,400i,600,700|noto-sans-kr:300,400,500&display=swap" rel="stylesheet">
 <script src="https://cdn.tailwindcss.com"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-
 <style>
-/* ═══════════════════════════════
-   DESIGN TOKENS (App screen)
-═══════════════════════════════ */
-:root {
-  --void:        #050a12;
-  --gold:        #C49A38;
-  --gold-b:      #D4A845;
-  --text:        #F0EDE6;
-  --text-2:      rgba(240,237,230,.88);
-  --muted:       rgba(240,237,230,.52);
-  --surface:     #0a1628;
-  --surface-2:   #0c1d34;
-  --surface-3:   #081422;
-  --border:      rgba(196,154,56,.09);
-  --border-b:    rgba(196,154,56,.16);
-  --border-gold: rgba(196,154,56,.28);
-  --positive:    #4CAF7D;
-  --negative:    #D95F5F;
-}
-*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-html { -webkit-font-smoothing: antialiased; -moz-osx-font-smoothing: grayscale; font-size: 18px; }
-::selection { background: #C49A38; color: #050a12; }
-.fd { font-family: 'Cormorant Garamond', serif; }
-.fm { font-family: 'IBM Plex Mono', monospace; }
+:root{--void:#050a12;--gold:#C49A38;--gold-b:#D4A845;--text:#F0EDE6;--text-2:rgba(240,237,230,.88);--muted:rgba(240,237,230,.52);--surface:#0a1628;--surface-2:#0c1d34;--surface-3:#081422;--border:rgba(196,154,56,.09);--border-b:rgba(196,154,56,.16);--border-gold:rgba(196,154,56,.28);--positive:#4CAF7D;--negative:#D95F5F}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-font-smoothing:antialiased;-moz-osx-font-smoothing:grayscale;font-size:18px}
+::selection{background:#C49A38;color:#050a12}
+.fd{font-family:'Cormorant Garamond',serif}.fm{font-family:'IBM Plex Mono',monospace}
+::-webkit-scrollbar{width:6px}::-webkit-scrollbar-track{background:#050a12}::-webkit-scrollbar-thumb{background:#0d2040;border-radius:3px}::-webkit-scrollbar-thumb:hover{background:#C49A38}
+.noise{pointer-events:none;position:fixed;inset:0;z-index:9999;opacity:.02;mix-blend-mode:overlay}
+@keyframes spin{to{transform:rotate(360deg)}}
+.masonry-grid{column-count:1;column-gap:1.5rem}
+@media(min-width:768px){.masonry-grid{column-count:2}}
+@media(min-width:1024px){.masonry-grid{column-count:3}}
+.break-inside-avoid{break-inside:avoid}
 
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #050a12; }
-::-webkit-scrollbar-thumb { background: #0d2040; border-radius: 3px; }
-::-webkit-scrollbar-thumb:hover { background: #C49A38; }
+/* AUTH */
+#screen-auth{display:block;background:#050a12;color:#c8c4bc;font-family:'Inter',sans-serif}
+#screen-auth h1,#screen-auth h2,#screen-auth h3,#screen-auth h4{font-family:'Playfair Display',serif}
+#screen-auth nav{position:fixed;top:0;width:100%;z-index:50;mix-blend-mode:difference;padding:1.5rem 3rem;display:flex;justify-content:space-between;align-items:center;background:linear-gradient(to bottom,rgba(5,10,18,.85),transparent);backdrop-filter:blur(2px)}
+.auth-logo{font-family:'Playfair Display',serif;font-size:1.35rem;font-weight:600;font-style:italic;color:#fff;letter-spacing:-.01em;text-transform:uppercase}
+.auth-nav-links{display:none;gap:2rem;font-size:.82rem;letter-spacing:.04em;color:#a3a3a3;font-weight:500}
+@media(min-width:768px){.auth-nav-links{display:flex}}
+.auth-nav-links a{color:#9aa8bc;text-decoration:none;transition:color .2s}.auth-nav-links a:hover{color:#F0EDE6}
+.auth-nav-cta{font-size:.75rem;letter-spacing:.1em;text-transform:uppercase;font-weight:500;color:#9aa8bc;border:1px solid rgba(196,154,56,.3);padding:.45rem 1.1rem;transition:all .2s;border-radius:2px;cursor:pointer;background:transparent}
+.auth-nav-cta:hover{background:rgba(196,154,56,.12);color:#C49A38}
+.auth-hero{position:relative;height:100vh;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.auth-hero-bg{position:absolute;inset:0;z-index:0}
+.auth-hero-bg img{width:100%;height:100%;object-fit:cover;opacity:.38;filter:grayscale(100%) brightness(.55) contrast(1.4) sepia(20%)}
+.auth-hero-bg::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse 100% 55% at 0% 100%,rgba(196,154,56,.12) 0%,transparent 65%),linear-gradient(to top,#050a12 0%,rgba(5,10,18,.65) 45%,rgba(5,10,18,.1) 100%),linear-gradient(to right,rgba(5,10,18,.70) 0%,transparent 60%)}
+.auth-hero-body{position:relative;z-index:10;text-align:center;padding:0 6vw;display:flex;flex-direction:column;align-items:center;gap:1.5rem;max-width:100%}
+.auth-hero-eyebrow{font-size:.68rem;letter-spacing:.3em;text-transform:uppercase;color:#C49A38;font-family:'IBM Plex Mono',monospace;text-shadow:0 0 18px rgba(196,154,56,.45)}
+.auth-hero-title{font-family:'Playfair Display',serif;font-size:clamp(4rem,10vw,10rem);font-style:italic;color:#fff;letter-spacing:-.04em;line-height:.9;margin:0}
+.hero-edge-panel{position:absolute;right:0;top:0;bottom:0;width:480px;z-index:20;display:flex;align-items:center;transform:translateX(calc(100% - 120px));transition:transform .55s cubic-bezier(.4,0,.2,1)}
+.hero-edge-panel:hover,.hero-edge-panel:focus-within{transform:translateX(0)}
+.hero-edge-tab{width:120px;flex-shrink:0;height:100%;display:flex;align-items:center;justify-content:center}
+.hero-edge-tab-line{width:1px;height:100px;background:linear-gradient(to bottom,transparent,rgba(196,154,56,.4),transparent);position:relative}
+.hero-edge-tab-dot{width:5px;height:5px;border-radius:50%;background:#C49A38;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);box-shadow:0 0 10px rgba(196,154,56,.6)}
+.hero-edge-content{flex:1;height:100%;background:rgba(5,10,18,.94);backdrop-filter:blur(24px);border-left:1px solid rgba(196,154,56,.16);padding:3rem 2rem;display:flex;flex-direction:column;justify-content:center;gap:2.5rem}
+.hero-edge-label{font-family:'IBM Plex Mono',monospace;font-size:.6rem;letter-spacing:.28em;text-transform:uppercase;color:#C49A38;margin-bottom:1.5rem}
+.hero-edge-stat{display:flex;flex-direction:column;gap:.4rem;padding-bottom:2rem;border-bottom:1px solid rgba(196,154,56,.08)}
+.hero-edge-stat:last-child{border-bottom:none;padding-bottom:0}
+.hero-edge-stat-num{font-family:'Playfair Display',serif;font-size:2.2rem;font-style:italic;color:#fff;letter-spacing:-.02em;line-height:1}
+.hero-edge-stat-num span{color:#C49A38;text-shadow:0 0 12px rgba(196,154,56,.35)}
+.hero-edge-stat-desc{font-size:.78rem;color:#5a6a80;line-height:1.6;font-weight:300}
+.auth-hero-sub{font-size:clamp(.88rem,1.2vw,1rem);line-height:1.85;color:#7a8ca0;max-width:380px;font-weight:300}
+.auth-scroll-indicator{position:absolute;bottom:5vh;left:50%;transform:translateX(-50%);z-index:20}
+@keyframes chevron-bounce{0%,100%{transform:translateY(0);opacity:.5}50%{transform:translateY(10px);opacity:.9}}
+.auth-chevron{color:rgba(196,154,56,.65);animation:chevron-bounce 2.2s ease-in-out infinite;display:block;filter:drop-shadow(0 0 6px rgba(196,154,56,.3))}
+.auth-statement{padding:6rem 1.5rem 7rem;background:#050a12}
+.auth-statement-inner{max-width:640px;margin:0 auto;text-align:center}
+.auth-statement-icon{color:#2a3a52;margin-bottom:1.75rem}
+.auth-statement-quote{font-family:'Playfair Display',serif;font-size:clamp(1.4rem,2.8vw,2.1rem);font-style:italic;color:#F0EDE6;letter-spacing:-.01em;line-height:1.45;margin-bottom:1.5rem;text-shadow:0 2px 24px rgba(196,154,56,.08)}
+.auth-statement-body{font-size:.9rem;line-height:1.95;color:#5a6a80;font-weight:300}
+.auth-gallery{padding:0 1rem 6rem;background:#050a12}
+.auth-gallery-inner{max-width:1400px;margin:0 auto}
+.auth-gallery-header{display:flex;justify-content:space-between;align-items:flex-end;border-bottom:1px solid #0d1e35;padding-bottom:1.5rem;margin-bottom:3rem;padding-left:.5rem;padding-right:.5rem}
+.auth-gallery-title{font-family:'Playfair Display',serif;font-size:1.25rem;color:#F0EDE6;letter-spacing:-.01em}
+.auth-gallery-link{font-size:.65rem;text-transform:uppercase;letter-spacing:.2em;color:#3a5070;text-decoration:none;display:flex;align-items:center;gap:.5rem;transition:color .2s}
+.auth-gallery-link:hover{color:#C49A38}
+.gallery-uniform{display:grid;grid-template-columns:repeat(3,1fr);gap:1rem}
+@media(max-width:768px){.gallery-uniform{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:480px){.gallery-uniform{grid-template-columns:1fr}}
+.gallery-item{cursor:pointer}
+.gallery-img-wrap{position:relative;overflow:hidden;border-radius:2px;background:#0a1628;aspect-ratio:4/3}
+.gallery-img-wrap img{width:100%;height:100%;object-fit:cover;filter:brightness(.75) saturate(.9);opacity:.9;transform:scale(1);transition:filter .7s ease,opacity .5s ease,transform .7s ease}
+.gallery-item:hover .gallery-img-wrap img{filter:brightness(.9) saturate(1.1) sepia(15%) hue-rotate(5deg);opacity:1;transform:scale(1.05)}
+.gallery-cap{margin-top:.65rem;display:flex;justify-content:space-between;align-items:center;opacity:0;transition:opacity .3s}
+.gallery-item:hover .gallery-cap{opacity:1}
+.gallery-cap span{font-size:.7rem;color:#4a6070}.gallery-cap .cap-right{color:#2a3a52}
+.auth-process{border-top:1px solid #0d1e35;border-bottom:1px solid #0d1e35;background:rgba(10,22,40,.4);padding:6rem 3rem}
+@media(max-width:768px){.auth-process{padding:4rem 1.5rem}}
+.auth-process-inner{max-width:1400px;margin:0 auto}
+.auth-process-head{margin-bottom:4.5rem}
+.auth-process-heading{font-family:'Playfair Display',serif;font-size:1.9rem;color:#F0EDE6;letter-spacing:-.01em;margin-bottom:.7rem}
+.auth-process-sub{font-size:.85rem;color:#4a6070;max-width:460px;line-height:1.8}
+.auth-process-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3rem}
+@media(max-width:768px){.auth-process-grid{grid-template-columns:1fr;gap:2.5rem}}
+.process-num{display:block;font-family:'Playfair Display',serif;font-size:3.5rem;color:#C49A38;line-height:1;margin-bottom:1.5rem;transition:color .3s,text-shadow .3s;opacity:.55}
+.auth-process-grid>div:hover .process-num{color:#C49A38;opacity:1;text-shadow:0 0 20px rgba(196,154,56,.4)}
+.process-name{font-size:1rem;font-weight:500;color:#F0EDE6;margin-bottom:.75rem}
+.process-desc{font-size:.83rem;line-height:1.8;color:#4a6070}
+.auth-features{background:#050a12;padding:6rem 3rem}
+@media(max-width:768px){.auth-features{padding:4rem 1.5rem}}
+.auth-features-inner{display:grid;grid-template-columns:1fr 1fr;gap:5rem;max-width:1400px;margin:0 auto;align-items:center}
+@media(max-width:900px){.auth-features-inner{grid-template-columns:1fr;gap:3rem}}
+.features-img-wrap{height:500px;width:100%;border-radius:2px;overflow:hidden;background:#0a1628;border:1px solid #0d1e35}
+.features-img-wrap img{width:100%;height:100%;object-fit:cover;opacity:.7;transition:opacity .5s,transform .6s}
+.features-img-wrap:hover img{opacity:.85;transform:scale(1.03)}
+.features-heading{font-family:'Playfair Display',serif;font-size:clamp(1.6rem,2.8vw,2.2rem);color:#F0EDE6;letter-spacing:-.01em;margin-bottom:1rem}
+.features-body{font-size:.88rem;color:#4a6070;line-height:1.9;margin-bottom:2.5rem}
+.feature-list{display:flex;flex-direction:column;gap:1.5rem}
+.feature-item{display:flex;gap:1rem;align-items:flex-start}
+.feature-icon{width:38px;height:38px;flex-shrink:0;border-radius:50%;background:#0a1628;border:1px solid rgba(196,154,56,.22);display:flex;align-items:center;justify-content:center;color:#C49A38}
+.feature-name{font-size:.9rem;font-weight:500;color:#d8d4cc;margin-bottom:.3rem}
+.feature-desc{font-size:.78rem;color:#3a5070;line-height:1.7}
+.auth-testimonial{padding:6rem 1.5rem;background:#050a12;border-top:1px solid #0d1e35}
+.auth-testimonial-inner{max-width:640px;margin:0 auto;text-align:center}
+.testimonial-quote{font-family:'Playfair Display',serif;font-size:clamp(1.1rem,2vw,1.5rem);font-style:italic;color:#c8c4bc;line-height:1.65;margin-bottom:1.5rem}
+.testimonial-author{font-size:.62rem;text-transform:uppercase;letter-spacing:.22em;color:#3a5070;font-family:'IBM Plex Mono',monospace}
+.auth-signin{background:#060e1c;border-top:1px solid #0d1e35;border-bottom:1px solid #0d1e35;padding:6rem 1.5rem}
+.auth-signin-inner{max-width:480px;margin:0 auto}
+.signin-header{text-align:center;margin-bottom:3.5rem}
+.signin-label{font-size:.65rem;text-transform:uppercase;letter-spacing:.22em;color:#3a5070;margin-bottom:1.2rem;display:block;font-family:'IBM Plex Mono',monospace}
+.signin-title{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,3.5vw,2.8rem);font-style:italic;color:#F0EDE6;letter-spacing:-.02em;margin-bottom:.6rem;text-shadow:0 2px 24px rgba(196,154,56,.1)}
+.signin-desc{font-size:.88rem;color:#5a6a80;line-height:1.7}
+.signin-rule{width:32px;height:1px;background:#C49A38;box-shadow:0 0 10px rgba(196,154,56,.4);margin:2rem auto 2.5rem}
+.btn-g{width:100%;padding:1.1rem 1.8rem;background:#C49A38;color:#050a12;border:none;font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:.9rem;position:relative;overflow:hidden;transition:background .2s,transform .15s,box-shadow .2s;margin-bottom:.85rem;border-radius:2px}
+.btn-g:hover{background:#D4A845;transform:translateY(-1px);box-shadow:0 6px 24px rgba(196,154,56,.3)}
+.btn-g .sh,.btn-start .sh,.btn-brief .sh{position:absolute;inset:0;background:linear-gradient(90deg,transparent,rgba(255,255,255,.18),transparent);transform:translateX(-100%);transition:transform .55s}
+.btn-g:hover .sh,.btn-start:hover .sh,.btn-brief:hover:not(:disabled) .sh{transform:translateX(100%)}
+.btn-ghost-auth{width:100%;padding:1rem;background:transparent;color:#7a8ca0;border:1px solid #0d1e35;border-radius:2px;font-family:'IBM Plex Mono',monospace;font-size:.74rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:border-color .2s,color .2s}
+.btn-ghost-auth:hover{border-color:rgba(196,154,56,.35);color:#C49A38}
+.signin-divider{display:flex;align-items:center;gap:1rem;margin:1.4rem 0;font-size:.6rem;color:#2a3a52;letter-spacing:.1em;text-transform:uppercase;font-family:'IBM Plex Mono',monospace}
+.signin-divider::before,.signin-divider::after{content:'';flex:1;height:1px;background:#0d1e35}
+.signin-disclaimer{margin-top:1.75rem;text-align:center;font-size:.6rem;line-height:2;color:#2a3a52;font-family:'IBM Plex Mono',monospace}
+#screen-auth footer{background:#050a12;border-top:1px solid #0d1e35;padding:3rem}
+.auth-footer-inner{max-width:1400px;margin:0 auto;display:flex;flex-direction:column;align-items:center;gap:.5rem;text-align:center}
+@media(min-width:768px){.auth-footer-inner{flex-direction:row;justify-content:space-between}}
+.auth-footer-brand{font-family:'Playfair Display',serif;font-size:1.3rem;color:#F0EDE6;font-style:italic;letter-spacing:-.01em}
+.auth-footer-sub,.auth-footer-copy{font-size:.72rem;color:#2a3a52}
+.auth-footer-sub{margin-top:.2rem}
 
-/* Noise overlay */
-.noise { pointer-events:none; position:fixed; inset:0; z-index:9999; opacity:.02; mix-blend-mode:overlay; }
+/* APP */
+body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-serif;font-weight:400}
+#screen-app{display:none;min-height:100dvh;background:var(--void)}
+.app-nav{position:fixed;top:0;left:0;right:0;z-index:200;height:84px;display:flex;align-items:center;padding:0 3rem;gap:1.5rem;background:rgba(5,10,18,.88);backdrop-filter:blur(32px);border-bottom:1px solid var(--border);transition:all .3s}
+.app-nav.scrolled{background:rgba(5,10,18,.98);border-color:var(--border-b)}
+.nav-logo{font-family:'Cormorant Garamond',serif;font-size:2.2rem;font-weight:600;font-style:italic;color:var(--text);flex-shrink:0;letter-spacing:-.01em;text-shadow:0 0 24px rgba(196,154,56,.18)}
+.nav-sep{width:1px;height:20px;background:var(--border);flex-shrink:0}
+.nav-right{display:flex;align-items:center;gap:1rem;margin-left:auto;flex-shrink:0}
+.nav-user{font-family:'IBM Plex Mono',monospace;font-size:.84rem;color:var(--muted);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.btn-nav{padding:.65rem 1.5rem;background:transparent;border:1px solid var(--border-b);border-radius:9999px;color:var(--muted);font-family:'IBM Plex Mono',monospace;font-size:.88rem;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:all .15s}
+.btn-nav:hover{border-color:var(--border-gold);color:var(--gold)}
+.btn-watchlist-nav{padding:.65rem 1.5rem;background:transparent;border:1px solid var(--border-gold);border-radius:9999px;color:var(--gold);font-family:'IBM Plex Mono',monospace;font-size:.88rem;letter-spacing:.07em;text-transform:uppercase;cursor:pointer;transition:all .15s;display:none}
+.btn-watchlist-nav:hover{background:rgba(196,154,56,.08)}
+.app-body{margin-top:84px;display:flex;flex-direction:column;min-height:calc(100dvh - 84px);width:100%}
+.app-topbar{display:none;position:sticky;top:84px;z-index:100;background:rgba(5,10,18,.97);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-bottom:1px solid var(--border);padding:1.25rem 3rem}
+.app-topbar.visible{display:block}
+.topbar-inner{max-width:1400px;margin:0 auto;display:flex;align-items:center;gap:1.5rem}
+.topbar-search{flex:0 0 320px;position:relative}
+.topbar-stock{flex:1;display:flex;align-items:center;gap:1.1rem;border-left:1px solid var(--border);padding-left:1.5rem;overflow:hidden}
+.topbar-ticker{font-family:'Cormorant Garamond',serif;font-size:2.8rem;font-style:italic;font-weight:600;color:var(--text);line-height:1;flex-shrink:0}
+.topbar-info{display:flex;flex-direction:column;gap:.2rem;overflow:hidden}
+.topbar-name{font-size:1.1rem;color:var(--text-2);font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.topbar-badge{font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:.28rem .8rem;border-radius:9999px;border:1px solid var(--border-gold);color:var(--gold);background:rgba(201,169,98,.06);letter-spacing:.1em;text-transform:uppercase;display:inline-block;width:fit-content}
+.topbar-actions{display:flex;align-items:center;gap:.75rem;flex-shrink:0;position:relative}
+.topbar-guest{font-family:'IBM Plex Mono',monospace;font-size:.78rem;color:rgba(201,169,98,.65);letter-spacing:.04em;border:1px solid rgba(201,169,98,.2);border-radius:9999px;padding:.45rem 1.2rem;white-space:nowrap;cursor:pointer;transition:border-color .15s,color .15s;background:none}
+.topbar-guest:hover{color:var(--gold);border-color:rgba(201,169,98,.5)}
+.search-wrap{position:relative}
+.search-input{width:100%;padding:1rem 1.4rem;background:rgba(8,16,28,.9);border:1px solid var(--border-b);border-radius:.875rem;color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:1.05rem;font-weight:400;outline:none;transition:border-color .2s,box-shadow .2s}
+.search-input:focus{border-color:rgba(201,169,98,.4);box-shadow:0 0 0 3px rgba(201,169,98,.06)}
+.search-input::placeholder{color:rgba(232,228,220,.2)}
+.search-dd{position:absolute;top:calc(100% + .5rem);left:0;right:0;background:#081828;border:1px solid rgba(196,154,56,.15);border-radius:1rem;overflow:hidden;z-index:300;box-shadow:0 20px 56px rgba(0,0,0,.7);display:none}
+.search-dd.open{display:block}
+.dd-item{padding:1.15rem 1.5rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);transition:background .1s}
+.dd-item:last-child{border-bottom:none}.dd-item:hover{background:rgba(201,169,98,.04)}
+.dd-name{font-size:1.05rem;color:var(--text);font-weight:400}
+.dd-meta{display:flex;align-items:center;gap:.6rem}
+.dd-ticker{font-family:'IBM Plex Mono',monospace;font-size:.92rem;color:var(--gold)}
+.dd-mkt{font-family:'IBM Plex Mono',monospace;font-size:.72rem;padding:.2rem .65rem;border-radius:.45rem;background:rgba(201,169,98,.07);color:var(--muted);border:1px solid var(--border-gold);letter-spacing:.07em}
+.dd-msg{padding:1.4rem;font-family:'IBM Plex Mono',monospace;font-size:.84rem;color:var(--muted);text-align:center}
+.btn-brief{padding:1.1rem 2.4rem;background:var(--gold);color:var(--void);border:none;border-radius:.75rem;font-family:'IBM Plex Mono',monospace;font-size:1rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;position:relative;overflow:hidden;transition:background .2s,transform .2s,box-shadow .2s;display:flex;align-items:center;gap:.6rem;white-space:nowrap}
+.btn-brief:hover:not(:disabled){background:var(--gold-b);transform:translateY(-1px);box-shadow:0 8px 28px rgba(196,154,56,.35)}
+.btn-brief:disabled{opacity:.35;cursor:not-allowed;transform:none}
+.btn-save-stock{background:transparent;border:1px solid rgba(196,154,56,.35);color:var(--gold);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.9rem;letter-spacing:.05em;padding:.75rem 1.4rem;border-radius:.5rem;transition:all .15s;white-space:nowrap;display:inline-flex;align-items:center;gap:.4rem}
+.btn-save-stock:hover{background:rgba(196,154,56,.12);border-color:var(--gold)}
+.btn-remove-stock{background:transparent;border:1px solid rgba(232,228,220,.1);color:rgba(232,228,220,.3);cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.9rem;letter-spacing:.05em;padding:.75rem 1.4rem;border-radius:.5rem;transition:color .15s,border-color .15s;white-space:nowrap}
+.btn-remove-stock:hover{color:var(--negative);border-color:rgba(217,95,95,.35)}
+.summary-box{display:none;background:var(--surface);border:1px solid var(--border);border-radius:1.35rem;overflow:hidden;margin-bottom:1.5rem}
+.summary-box.visible{display:block}
+.summary-head{padding:1.25rem 1.5rem .9rem;border-bottom:1px solid var(--border)}
+.summary-label{font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.summary-body{padding:1.25rem 1.75rem 1.6rem}
+.summary-pills{display:flex;flex-wrap:wrap;gap:.6rem;margin-bottom:1.25rem}
+.summary-pill{display:inline-flex;align-items:center;gap:.35rem;padding:.45rem 1.1rem;border-radius:9999px;font-family:'IBM Plex Mono',monospace;font-size:.8rem;letter-spacing:.06em;font-weight:600}
+.summary-pill.pos{background:rgba(76,175,125,.22);color:#5CE89A;border:1.5px solid rgba(76,175,125,.6)}
+.summary-pill.neg{background:rgba(217,95,95,.22);color:#FF6B6B;border:1.5px solid rgba(217,95,95,.6)}
+.summary-pill.neu{background:rgba(201,169,98,.18);color:#E0C070;border:1.5px solid rgba(201,169,98,.5)}
+.summary-verdict{font-size:1.1rem;color:var(--text-2);line-height:1.85;font-weight:400}
+.app-content{flex:1;width:100%}
+.app-content-inner{max-width:1400px;margin:0 auto;padding:3rem 3.5rem 5rem}
+.welcome-search-wrap{width:100%;padding:2.5rem 3rem 0;border-bottom:1px solid var(--border);background:rgba(5,10,18,.6)}
+.welcome-search-inner{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:.7rem;padding-bottom:2rem}
+.welcome-search-label{font-family:'IBM Plex Mono',monospace;font-size:.8rem;letter-spacing:.25em;text-transform:uppercase;color:var(--muted)}
+.welcome-search-field{position:relative}
+.welcome-search-input{width:100%;padding:1.5rem 2rem;background:rgba(8,16,28,.9);border:1px solid var(--border-b);border-radius:1.1rem;color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:1.25rem;font-weight:400;outline:none;transition:border-color .2s,box-shadow .2s}
+.welcome-search-input:focus{border-color:rgba(201,169,98,.45);box-shadow:0 0 0 4px rgba(201,169,98,.07)}
+.welcome-search-input::placeholder{color:rgba(232,228,220,.2)}
+.welcome-search-icon{position:absolute;right:1.4rem;top:50%;transform:translateY(-50%);color:rgba(201,169,98,.4);pointer-events:none}
+.welcome-search-dd{position:absolute;top:calc(100% + .5rem);left:0;right:0;background:#081828;border:1px solid rgba(196,154,56,.15);border-radius:1rem;overflow:hidden;z-index:300;box-shadow:0 20px 56px rgba(0,0,0,.7);display:none}
+.welcome-search-dd.open{display:block}
+.welcome-content{display:flex;flex-direction:column;align-items:center;text-align:center;padding:8rem 3rem 4rem;max-width:700px;margin:0 auto}
+.welcome-label{font-family:'IBM Plex Mono',monospace;font-size:.82rem;letter-spacing:.3em;text-transform:uppercase;color:var(--gold);opacity:.8;margin-bottom:1.5rem}
+.welcome-title{font-family:'Cormorant Garamond',serif;font-size:clamp(3.5rem,5.5vw,6.5rem);font-weight:600;font-style:italic;letter-spacing:-.02em;line-height:1.05;color:var(--text);margin-bottom:1.25rem;text-shadow:0 2px 28px rgba(196,154,56,.1)}
+.welcome-divider{width:48px;height:1px;background:rgba(201,169,98,.4);margin:0 auto 1.5rem}
+.welcome-desc{font-size:1.15rem;color:var(--text-2);line-height:1.9;margin-bottom:2.75rem;font-weight:400;max-width:520px}
+.welcome-hints{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem;width:100%;margin-bottom:2.75rem}
+.welcome-hint{background:rgba(8,16,28,.85);border:1px solid var(--border);border-radius:1.1rem;padding:1.4rem 1.1rem 1.2rem;display:flex;flex-direction:column;gap:.55rem;transition:border-color .2s;text-align:left}
+.welcome-hint:hover{border-color:var(--border-gold)}
+.hint-icon{line-height:1;margin-bottom:.2rem}
+.hint-title{font-family:'IBM Plex Mono',monospace;font-size:.84rem;color:var(--text);letter-spacing:.05em;font-weight:500}
+.hint-desc{font-size:.96rem;color:var(--muted);line-height:1.7;font-weight:400}
+.btn-start{display:inline-flex;align-items:center;gap:.7rem;padding:1.35rem 3.5rem;background:var(--gold);color:var(--void);border:none;border-radius:.875rem;font-family:'IBM Plex Mono',monospace;font-size:1.05rem;font-weight:600;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;position:relative;overflow:hidden;transition:background .2s,transform .2s,box-shadow .2s}
+.btn-start:hover{background:var(--gold-b);transform:translateY(-2px);box-shadow:0 8px 28px rgba(196,154,56,.35)}
+.brief-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:1.75rem;padding-bottom:1.25rem;border-bottom:1px solid var(--border)}
+.brief-meta{display:flex;align-items:center;gap:.65rem;font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase}
+.brief-dot{width:8px;height:8px;border-radius:50%;background:var(--gold);flex-shrink:0}
+.brief-count{font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--muted);letter-spacing:.04em}
+.loader{width:40px;height:40px;border:2px solid var(--border-b);border-top-color:var(--gold);border-radius:50%;animation:spin .75s linear infinite;margin:0 auto 1.5rem}
+.loader-label{font-family:'IBM Plex Mono',monospace;font-size:.92rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;font-weight:500}
+.cards-grid{display:grid;gap:1.5rem}
+.news-card{background:var(--surface);border:1px solid var(--border);border-radius:1.25rem;overflow:hidden;transition:border-color .2s,box-shadow .2s,transform .2s;position:relative}
+.news-card.up{border-color:rgba(76,175,125,.18)}.news-card.down{border-color:rgba(217,95,95,.18)}.news-card.flat{border-color:rgba(201,169,98,.15)}
+.news-card:hover{border-color:rgba(232,228,220,.13);box-shadow:0 10px 36px rgba(0,0,0,.32);transform:translateY(-1px)}
+.news-card::before{content:'';position:absolute;top:0;left:0;width:5px;height:100%}
+.news-card.up::before{background:linear-gradient(180deg,#5CE89A,rgba(76,175,125,.2))}.news-card.down::before{background:linear-gradient(180deg,#FF6B6B,rgba(217,95,95,.2))}.news-card.flat::before{background:linear-gradient(180deg,#E0C070,rgba(201,169,98,.2))}
+.card-head{padding:2rem 2.2rem 1.6rem 2.4rem;cursor:pointer;display:flex;flex-direction:column;gap:1rem}
+.card-top-row{display:flex;align-items:flex-start;justify-content:space-between;gap:1rem}
+.card-title{font-size:1.25rem;color:var(--text);line-height:1.65;font-weight:500;flex:1}
+.card-toggle{font-family:'IBM Plex Mono',monospace;font-size:.88rem;color:var(--muted);white-space:nowrap;flex-shrink:0;transition:color .15s;padding-top:.2rem;font-weight:500}
+.card-toggle:hover{color:var(--gold)}
+.card-verdict-row{display:flex;align-items:flex-start;gap:.75rem;flex-wrap:wrap}
+.sentiment-badge{display:inline-flex;align-items:center;gap:.45rem;padding:.55rem 1.3rem;border-radius:9999px;font-family:'IBM Plex Mono',monospace;font-size:.92rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;flex-shrink:0}
+.sentiment-badge.up{background:rgba(76,175,125,.22);color:#5CE89A;border:1.5px solid rgba(76,175,125,.6)}
+.sentiment-badge.down{background:rgba(217,95,95,.22);color:#FF6B6B;border:1.5px solid rgba(217,95,95,.6)}
+.sentiment-badge.flat{background:rgba(201,169,98,.18);color:#E0C070;border:1.5px solid rgba(201,169,98,.5)}
+.card-verdict{font-size:1.12rem;color:var(--text-2);line-height:1.7;font-weight:400;flex:1}
+.card-detail{padding:0 2.2rem 0 2.4rem;max-height:0;overflow:hidden;transition:max-height .38s cubic-bezier(.4,0,.2,1),padding .38s}
+.card-detail.open{max-height:2000px;padding-bottom:2rem}
+.card-summary-text{font-size:1.12rem;color:var(--text-2);line-height:1.9;margin-bottom:1.4rem;padding-bottom:1.4rem;border-bottom:1px solid var(--border);font-weight:400}
+.impact-row{display:grid;grid-template-columns:1fr 1fr;gap:1rem;margin-bottom:1.2rem}
+.impact{background:var(--surface-2);border-radius:.9rem;padding:1.3rem 1.5rem}
+.impact-lbl{font-family:'IBM Plex Mono',monospace;font-size:.88rem;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);margin-bottom:.6rem;font-weight:500}
+.impact-val{font-size:1.1rem;color:var(--text);line-height:1.8;font-weight:400}
+.card-link-row{display:flex;justify-content:flex-end}
+.card-link{color:var(--muted);text-decoration:none;font-family:'IBM Plex Mono',monospace;font-size:.82rem;transition:color .15s;letter-spacing:.04em}
+.card-link:hover{color:var(--gold)}
+.topbar-price{display:none;flex-direction:column;align-items:flex-end;flex-shrink:0;border-left:1px solid var(--border);padding-left:1.5rem}
+.price-val{font-family:'IBM Plex Mono',monospace;font-size:1.4rem;color:var(--text);font-weight:500;line-height:1.2}
+.price-chg{font-family:'IBM Plex Mono',monospace;font-size:.8rem;margin-top:.15rem}
+.price-chg.pos{color:var(--positive)}.price-chg.neg{color:var(--negative)}
+#watchlist-summary{width:100%;margin-top:2rem}
+.ps-header{display:flex;align-items:baseline;gap:.75rem;margin-bottom:.85rem}
+.ps-label{font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.ps-sublabel{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(232,228,220,.2);letter-spacing:.04em}
+.wl-sum-group-label{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.15em;text-transform:uppercase;color:var(--gold);margin-bottom:.5rem;margin-top:1rem}
+.wl-sum-group-label:first-child{margin-top:0}
+.portfolio-summary-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.65rem}
+.ps-item{background:var(--surface);border:1px solid var(--border);border-radius:1rem;padding:1rem 1.1rem;cursor:pointer;transition:border-color .15s,background .15s}
+.ps-item:hover{border-color:var(--border-gold);background:rgba(201,169,98,.04)}
+.ps-ticker{font-family:'Cormorant Garamond',serif;font-size:1.05rem;font-weight:600;font-style:italic;color:var(--text);margin-bottom:.15rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-name{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:rgba(232,228,220,.3);margin-bottom:.55rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ps-badge{font-family:'IBM Plex Mono',monospace;font-size:.7rem;padding:.22rem .65rem;border-radius:9999px;font-weight:600;display:inline-block}
+.ps-badge.pos{background:rgba(76,175,125,.22);color:#5CE89A;border:1px solid rgba(76,175,125,.5)}
+.ps-badge.neg{background:rgba(217,95,95,.22);color:#FF6B6B;border:1px solid rgba(217,95,95,.5)}
+.ps-badge.neu{background:rgba(201,169,98,.18);color:#E0C070;border:1px solid rgba(201,169,98,.4)}
+.ps-unanalyzed{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(232,228,220,.18)}
+.cache-notice{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:rgba(201,169,98,.5);letter-spacing:.04em}
 
-/* Loader spin */
-@keyframes spin { to { transform: rotate(360deg); } }
+/* 관심종목 패널 */
+.wl-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .3s}
+.wl-overlay.open{opacity:1;pointer-events:all}
+.wl-panel{position:fixed;right:0;top:0;bottom:0;width:360px;max-width:100vw;background:var(--surface-3);border-left:1px solid var(--border-b);z-index:600;transform:translateX(100%);transition:transform .35s cubic-bezier(.4,0,.2,1);display:flex;flex-direction:column;overflow:hidden}
+.wl-panel.open{transform:translateX(0)}
+.wl-panel-hdr{padding:1.5rem 1.5rem 1.25rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.wl-panel-title{font-family:'Cormorant Garamond',serif;font-size:1.5rem;font-style:italic;color:var(--text)}
+.wl-panel-meta{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted);margin-top:.15rem}
+.wl-panel-close{background:none;border:none;color:var(--muted);cursor:pointer;padding:.4rem;font-size:1.3rem;line-height:1;transition:color .15s}
+.wl-panel-close:hover{color:var(--text)}
+.wl-panel-body{flex:1;overflow-y:auto;padding:.75rem 0 1rem}
+.wl-panel-body::-webkit-scrollbar{width:4px}
+.wl-panel-body::-webkit-scrollbar-thumb{background:#0d2040}
+.wl-group-block{margin-bottom:.25rem}
+.wl-group-hdr{padding:.6rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
+.wl-group-name{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
+.wl-group-cnt{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--muted);margin-left:.4rem}
+.wl-group-del{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.2rem .5rem;font-size:.75rem;transition:color .15s;margin-left:auto}
+.wl-group-del:hover{color:var(--negative)}
+.wl-stock-item{padding:.8rem 1.5rem .8rem 2rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border)}
+.wl-stock-item:hover{background:rgba(201,169,98,.04)}
+.wl-stock-name{font-size:.95rem;color:var(--text-2);line-height:1.3}
+.wl-stock-ticker{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted);margin-top:.1rem}
+.wl-stock-del{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.3rem .5rem;font-size:.9rem;transition:color .15s;flex-shrink:0;margin-left:.5rem}
+.wl-stock-del:hover{color:var(--negative)}
+.wl-empty-msg{padding:2.5rem 1.5rem;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--muted);line-height:1.9}
+.wl-panel-footer{padding:.5rem 0;border-top:1px solid var(--border);flex-shrink:0}
+.wl-add-group-btn{width:calc(100% - 3rem);margin:.75rem 1.5rem;padding:.8rem;background:transparent;border:1px dashed rgba(196,154,56,.22);border-radius:.75rem;color:rgba(196,154,56,.55);font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s}
+.wl-add-group-btn:hover{border-color:rgba(196,154,56,.5);color:var(--gold);background:rgba(196,154,56,.04)}
+.wl-create-form{display:none;margin:.25rem 1.5rem .75rem;gap:.5rem;align-items:center}
+.wl-create-form.visible{display:flex}
+.wl-group-input{flex:1;padding:.65rem 1rem;background:rgba(8,16,28,.9);border:1px solid var(--border-b);border-radius:.5rem;color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:.9rem;outline:none;transition:border-color .2s}
+.wl-group-input:focus{border-color:rgba(201,169,98,.4)}
+.wl-group-confirm{padding:.65rem 1rem;background:var(--gold);color:var(--void);border:none;border-radius:.5rem;font-family:'IBM Plex Mono',monospace;font-size:.78rem;font-weight:600;cursor:pointer;transition:background .15s;white-space:nowrap}
+.wl-group-confirm:hover{background:var(--gold-b)}
 
-/* Masonry */
-.masonry-grid { column-count: 1; column-gap: 1.5rem; }
-@media (min-width: 768px) { .masonry-grid { column-count: 2; } }
-@media (min-width: 1024px) { .masonry-grid { column-count: 3; } }
-.break-inside-avoid { break-inside: avoid; }
+/* 그룹 선택 팝업 */
+.gsp{position:absolute;bottom:calc(100% + .5rem);right:0;min-width:220px;background:#081828;border:1px solid rgba(196,154,56,.2);border-radius:.875rem;overflow:hidden;z-index:400;box-shadow:0 -20px 56px rgba(0,0,0,.7)}
+.gsp-hdr{padding:.65rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+.gsp-item{padding:.85rem 1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);transition:background .1s;font-size:.92rem;color:var(--text-2)}
+.gsp-item:last-child{border-bottom:none}.gsp-item:hover{background:rgba(201,169,98,.05)}
+.gsp-cnt{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:var(--muted)}
+.gsp-create{padding:.85rem 1.25rem;cursor:pointer;font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--gold);letter-spacing:.06em;border-top:1px solid var(--border);transition:background .1s;display:flex;align-items:center;gap:.5rem}
+.gsp-create:hover{background:rgba(201,169,98,.05)}
+.gsp-new-form{padding:.75rem 1rem}
+.gsp-new-input{width:100%;padding:.6rem .9rem;background:rgba(8,16,28,.9);border:1px solid var(--border-b);border-radius:.45rem;color:var(--text);font-family:'Noto Sans KR',sans-serif;font-size:.88rem;outline:none;margin-bottom:.5rem;transition:border-color .2s}
+.gsp-new-input:focus{border-color:rgba(201,169,98,.4)}
+.gsp-btns{display:flex;gap:.4rem}
+.gsp-ok{flex:1;padding:.55rem;background:var(--gold);color:var(--void);border:none;border-radius:.4rem;font-family:'IBM Plex Mono',monospace;font-size:.75rem;font-weight:600;cursor:pointer}
+.gsp-cancel{padding:.55rem .9rem;background:transparent;border:1px solid var(--border-b);border-radius:.4rem;color:var(--muted);cursor:pointer;font-size:.75rem}
 
-/* Map dark mode */
-.map-dark { filter: grayscale(100%) invert(90%) contrast(85%); }
+/* Toast */
+.toast{position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);background:var(--surface-2);border:1px solid var(--border-b);padding:.75rem 1.5rem;border-radius:9999px;font-family:'IBM Plex Mono',monospace;font-size:.82rem;color:var(--text-2);z-index:9000;transition:transform .3s ease;white-space:nowrap;pointer-events:none;box-shadow:0 8px 32px rgba(0,0,0,.4)}
+.toast.show{transform:translateX(-50%) translateY(0)}
 
-/* ═══════════════════════════════
-   AUTH SCREEN  (DEJA VU exact)
-═══════════════════════════════ */
-#screen-auth {
-  display: block;
-  background: #050a12;
-  color: #c8c4bc;
-  font-family: 'Inter', sans-serif;
-}
-#screen-auth h1,
-#screen-auth h2,
-#screen-auth h3,
-#screen-auth h4 { font-family: 'Playfair Display', serif; }
-
-/* ── NAV (DEJA VU exact) ── */
-#screen-auth nav {
-  position: fixed; top: 0; width: 100%; z-index: 50;
-  mix-blend-mode: difference;
-  padding: 1.5rem 3rem;
-  display: flex; justify-content: space-between; align-items: center;
-  background: linear-gradient(to bottom, rgba(5,10,18,.85), transparent);
-  backdrop-filter: blur(2px);
-}
-.auth-logo {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.35rem; font-weight: 600; font-style: italic;
-  color: #fff; letter-spacing: -.01em; text-transform: uppercase;
-}
-.auth-nav-links {
-  display: none;
-  gap: 2rem; font-size: .82rem; letter-spacing: .04em; color: #a3a3a3; font-weight: 500;
-}
-@media(min-width:768px){ .auth-nav-links { display: flex; } }
-.auth-nav-links a { color: #9aa8bc; text-decoration: none; transition: color .2s; }
-.auth-nav-links a:hover { color: #F0EDE6; }
-.auth-nav-cta {
-  font-size: .75rem; letter-spacing: .1em; text-transform: uppercase;
-  font-weight: 500; color: #9aa8bc; text-decoration: none;
-  border: 1px solid rgba(196,154,56,.3); padding: .45rem 1.1rem;
-  transition: all .2s; border-radius: 2px; cursor: pointer;
-  background: transparent;
-}
-.auth-nav-cta:hover { background: rgba(196,154,56,.12); color: #C49A38; }
-
-/* ── HERO ── */
-.auth-hero {
-  position: relative; height: 100vh; width: 100%;
-  display: flex; align-items: center; justify-content: center; overflow: hidden;
-}
-.auth-hero-bg { position: absolute; inset: 0; z-index: 0; }
-.auth-hero-bg img {
-  width: 100%; height: 100%; object-fit: cover;
-  opacity: .38;
-  filter: grayscale(100%) brightness(.55) contrast(1.4) sepia(20%);
-}
-.auth-hero-bg::after {
-  content: '';
-  position: absolute; inset: 0;
-  background:
-    radial-gradient(ellipse 100% 55% at 0% 100%, rgba(196,154,56,.12) 0%, transparent 65%),
-    linear-gradient(to top, #050a12 0%, rgba(5,10,18,.65) 45%, rgba(5,10,18,.1) 100%),
-    linear-gradient(to right, rgba(5,10,18,.70) 0%, transparent 60%);
-}
-.auth-hero-body {
-  position: relative; z-index: 10;
-  text-align: center;
-  padding: 0 6vw;
-  display: flex; flex-direction: column; align-items: center; gap: 1.5rem;
-  max-width: 100%;
-}
-.auth-hero-eyebrow {
-  font-size: .68rem; letter-spacing: .3em; text-transform: uppercase;
-  color: #C49A38; font-family: 'IBM Plex Mono', monospace;
-  text-shadow: 0 0 18px rgba(196,154,56,.45);
-}
-.auth-hero-title {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(4rem, 10vw, 10rem);
-  font-style: italic; color: #fff;
-  letter-spacing: -.04em; line-height: .9;
-  margin: 0;
-}
-
-/* ── 우측 엣지 hover 패널 ── */
-.hero-edge-panel {
-  position: absolute; right: 0; top: 0; bottom: 0;
-  width: 480px; z-index: 20;
-  display: flex; align-items: center;
-  transform: translateX(calc(100% - 120px));
-  transition: transform .55s cubic-bezier(.4,0,.2,1);
-}
-.hero-edge-panel:hover,
-.hero-edge-panel:focus-within {
-  transform: translateX(0);
-}
-.hero-edge-tab {
-  width: 120px; flex-shrink: 0; height: 100%;
-  display: flex; align-items: center; justify-content: center;
-}
-.hero-edge-tab-line {
-  width: 1px; height: 100px;
-  background: linear-gradient(to bottom, transparent, rgba(196,154,56,.4), transparent);
-  position: relative;
-}
-.hero-edge-tab-dot {
-  width: 5px; height: 5px; border-radius: 50%;
-  background: #C49A38; position: absolute;
-  top: 50%; left: 50%; transform: translate(-50%,-50%);
-  box-shadow: 0 0 10px rgba(196,154,56,.6);
-}
-.hero-edge-content {
-  flex: 1; height: 100%;
-  background: rgba(5,10,18,.94);
-  backdrop-filter: blur(24px);
-  border-left: 1px solid rgba(196,154,56,.16);
-  padding: 3rem 2rem;
-  display: flex; flex-direction: column; justify-content: center; gap: 2.5rem;
-}
-.hero-edge-label {
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: .6rem; letter-spacing: .28em; text-transform: uppercase;
-  color: #C49A38; margin-bottom: 1.5rem;
-}
-.hero-edge-stat {
-  display: flex; flex-direction: column; gap: .4rem;
-  padding-bottom: 2rem;
-  border-bottom: 1px solid rgba(196,154,56,.08);
-}
-.hero-edge-stat:last-child { border-bottom: none; padding-bottom: 0; }
-.hero-edge-stat-num {
-  font-family: 'Playfair Display', serif;
-  font-size: 2.2rem; font-style: italic; color: #fff;
-  letter-spacing: -.02em; line-height: 1;
-}
-.hero-edge-stat-num span { color: #C49A38; text-shadow: 0 0 12px rgba(196,154,56,.35); }
-.hero-edge-stat-desc {
-  font-size: .78rem; color: #5a6a80; line-height: 1.6;
-  font-weight: 300;
-}
-.auth-hero-sub {
-  font-size: clamp(.88rem, 1.2vw, 1rem); line-height: 1.85;
-  color: #7a8ca0; max-width: 380px; font-weight: 300;
-}
-.auth-scroll-indicator {
-  position: absolute; bottom: 5vh; left: 50%; transform: translateX(-50%);
-  z-index: 20;
-}
-@keyframes chevron-bounce {
-  0%, 100% { transform: translateY(0); opacity: .5; }
-  50%       { transform: translateY(10px); opacity: .9; }
-}
-.auth-chevron {
-  color: rgba(196,154,56,.65);
-  animation: chevron-bounce 2.2s ease-in-out infinite;
-  display: block;
-  filter: drop-shadow(0 0 6px rgba(196,154,56,.3));
-}
-
-/* ── STATEMENT (DEJA VU exact) ── */
-.auth-statement { padding: 6rem 1.5rem 7rem; background: #050a12; }
-.auth-statement-inner { max-width: 640px; margin: 0 auto; text-align: center; }
-.auth-statement-icon { color: #2a3a52; margin-bottom: 1.75rem; }
-.auth-statement-quote {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.4rem, 2.8vw, 2.1rem);
-  font-style: italic; color: #F0EDE6;
-  letter-spacing: -.01em; line-height: 1.45; margin-bottom: 1.5rem;
-  text-shadow: 0 2px 24px rgba(196,154,56,.08);
-}
-.auth-statement-body {
-  font-size: .9rem; line-height: 1.95; color: #5a6a80; font-weight: 300;
-}
-
-/* ── GALLERY / MASONRY (DEJA VU exact) ── */
-.auth-gallery { padding: 0 1rem 6rem; background: #050a12; }
-.auth-gallery-inner { max-width: 1400px; margin: 0 auto; }
-.auth-gallery-header {
-  display: flex; justify-content: space-between; align-items: flex-end;
-  border-bottom: 1px solid #0d1e35; padding-bottom: 1.5rem; margin-bottom: 3rem;
-  padding-left: .5rem; padding-right: .5rem;
-}
-.auth-gallery-title {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.25rem; color: #F0EDE6; letter-spacing: -.01em;
-}
-.auth-gallery-link {
-  font-size: .65rem; text-transform: uppercase; letter-spacing: .2em;
-  color: #3a5070; text-decoration: none;
-  display: flex; align-items: center; gap: .5rem; transition: color .2s;
-}
-.auth-gallery-link:hover { color: #C49A38; }
-
-/* gallery — uniform grid */
-.gallery-uniform {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-}
-@media(max-width: 768px) { .gallery-uniform { grid-template-columns: repeat(2, 1fr); } }
-@media(max-width: 480px)  { .gallery-uniform { grid-template-columns: 1fr; } }
-
-.gallery-item { cursor: pointer; }
-.gallery-img-wrap {
-  position: relative; overflow: hidden; border-radius: 2px; background: #0a1628;
-  aspect-ratio: 4 / 3;
-}
-.gallery-img-wrap img {
-  width: 100%; height: 100%; object-fit: cover;
-  filter: brightness(.75) saturate(.9);
-  opacity: .9; transform: scale(1);
-  transition: filter .7s ease, opacity .5s ease, transform .7s ease;
-}
-.gallery-item:hover .gallery-img-wrap img {
-  filter: brightness(.9) saturate(1.1) sepia(15%) hue-rotate(5deg);
-  opacity: 1; transform: scale(1.05);
-}
-.gallery-cap {
-  margin-top: .65rem;
-  display: flex; justify-content: space-between; align-items: center;
-  opacity: 0; transition: opacity .3s;
-}
-.gallery-item:hover .gallery-cap { opacity: 1; }
-.gallery-cap span { font-size: .7rem; color: #4a6070; }
-.gallery-cap .cap-right { color: #2a3a52; }
-
-/* ── PROCESS / HOW IT WORKS (DEJA VU exact) ── */
-.auth-process {
-  border-top: 1px solid #0d1e35; border-bottom: 1px solid #0d1e35;
-  background: rgba(10,22,40,.4);
-  padding: 6rem 3rem;
-}
-@media(max-width:768px){ .auth-process { padding: 4rem 1.5rem; } }
-.auth-process-inner { max-width: 1400px; margin: 0 auto; }
-.auth-process-head { margin-bottom: 4.5rem; }
-.auth-process-heading {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.9rem; color: #F0EDE6; letter-spacing: -.01em; margin-bottom: .7rem;
-}
-.auth-process-sub { font-size: .85rem; color: #4a6070; max-width: 460px; line-height: 1.8; }
-.auth-process-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3rem; }
-@media(max-width:768px){ .auth-process-grid { grid-template-columns: 1fr; gap: 2.5rem; } }
-.process-num {
-  display: block; font-family: 'Playfair Display', serif;
-  font-size: 3.5rem; color: #C49A38; line-height: 1;
-  margin-bottom: 1.5rem; transition: color .3s, text-shadow .3s;
-  opacity: .55;
-}
-.auth-process-grid > div:hover .process-num { color: #C49A38; opacity: 1; text-shadow: 0 0 20px rgba(196,154,56,.4); }
-.process-name { font-size: 1rem; font-weight: 500; color: #F0EDE6; margin-bottom: .75rem; }
-.process-desc { font-size: .83rem; line-height: 1.8; color: #4a6070; }
-
-/* ── FEATURES / SPLIT (DEJA VU studio section exact) ── */
-.auth-features {
-  background: #050a12;
-  padding: 6rem 3rem;
-}
-@media(max-width:768px){ .auth-features { padding: 4rem 1.5rem; } }
-.auth-features-inner {
-  display: grid; grid-template-columns: 1fr 1fr;
-  gap: 5rem; max-width: 1400px; margin: 0 auto; align-items: center;
-}
-@media(max-width:900px){ .auth-features-inner { grid-template-columns: 1fr; gap: 3rem; } }
-.features-img-wrap {
-  height: 500px; width: 100%;
-  border-radius: 2px; overflow: hidden;
-  background: #0a1628; border: 1px solid #0d1e35;
-}
-.features-img-wrap img {
-  width: 100%; height: 100%; object-fit: cover; opacity: .7;
-  transition: opacity .5s, transform .6s;
-}
-.features-img-wrap:hover img { opacity: .85; transform: scale(1.03); }
-.features-heading {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.6rem, 2.8vw, 2.2rem); color: #F0EDE6;
-  letter-spacing: -.01em; margin-bottom: 1rem;
-}
-.features-body { font-size: .88rem; color: #4a6070; line-height: 1.9; margin-bottom: 2.5rem; }
-.feature-list { display: flex; flex-direction: column; gap: 1.5rem; }
-.feature-item { display: flex; gap: 1rem; align-items: flex-start; }
-.feature-icon {
-  width: 38px; height: 38px; flex-shrink: 0;
-  border-radius: 50%; background: #0a1628;
-  border: 1px solid rgba(196,154,56,.22);
-  display: flex; align-items: center; justify-content: center;
-  color: #C49A38;
-}
-.feature-name { font-size: .9rem; font-weight: 500; color: #d8d4cc; margin-bottom: .3rem; }
-.feature-desc { font-size: .78rem; color: #3a5070; line-height: 1.7; }
-
-/* ── TESTIMONIAL (DEJA VU exact) ── */
-.auth-testimonial {
-  padding: 6rem 1.5rem; background: #050a12;
-  border-top: 1px solid #0d1e35;
-}
-.auth-testimonial-inner { max-width: 640px; margin: 0 auto; text-align: center; }
-.testimonial-quote {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.1rem, 2vw, 1.5rem);
-  font-style: italic; color: #c8c4bc; line-height: 1.65; margin-bottom: 1.5rem;
-}
-.testimonial-author {
-  font-size: .62rem; text-transform: uppercase; letter-spacing: .22em;
-  color: #3a5070; font-family: 'IBM Plex Mono', monospace;
-}
-
-/* ── SIGN IN SECTION (replaces DEJA VU booking form) ── */
-.auth-signin {
-  background: #060e1c;
-  border-top: 1px solid #0d1e35; border-bottom: 1px solid #0d1e35;
-  padding: 6rem 1.5rem;
-}
-.auth-signin-inner { max-width: 480px; margin: 0 auto; }
-.signin-header { text-align: center; margin-bottom: 3.5rem; }
-.signin-label {
-  font-size: .65rem; text-transform: uppercase; letter-spacing: .22em;
-  color: #3a5070; margin-bottom: 1.2rem; display: block;
-  font-family: 'IBM Plex Mono', monospace;
-}
-.signin-title {
-  font-family: 'Playfair Display', serif;
-  font-size: clamp(1.8rem, 3.5vw, 2.8rem); font-style: italic; color: #F0EDE6;
-  letter-spacing: -.02em; margin-bottom: .6rem;
-  text-shadow: 0 2px 24px rgba(196,154,56,.1);
-}
-.signin-desc { font-size: .88rem; color: #5a6a80; line-height: 1.7; }
-.signin-rule {
-  width: 32px; height: 1px; background: #C49A38;
-  box-shadow: 0 0 10px rgba(196,154,56,.4);
-  margin: 2rem auto 2.5rem;
-}
-
-/* Buttons (match DEJA VU form button style, gold version) */
-.btn-g {
-  width: 100%; padding: 1.1rem 1.8rem;
-  background: #C49A38; color: #050a12;
-  border: none; font-family: 'IBM Plex Mono', monospace;
-  font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  cursor: pointer; display: flex; align-items: center; justify-content: center; gap: .9rem;
-  position: relative; overflow: hidden; transition: background .2s, transform .15s, box-shadow .2s;
-  margin-bottom: .85rem; border-radius: 2px;
-}
-.btn-g:hover { background: #D4A845; transform: translateY(-1px); box-shadow: 0 6px 24px rgba(196,154,56,.3); }
-.btn-g .sh, .btn-start .sh, .btn-brief .sh {
-  position: absolute; inset: 0;
-  background: linear-gradient(90deg, transparent, rgba(255,255,255,.18), transparent);
-  transform: translateX(-100%); transition: transform .55s;
-}
-.btn-g:hover .sh, .btn-start:hover .sh, .btn-brief:hover:not(:disabled) .sh { transform: translateX(100%); }
-
-.btn-ghost-auth {
-  width: 100%; padding: 1rem; background: transparent;
-  color: #7a8ca0; border: 1px solid #0d1e35; border-radius: 2px;
-  font-family: 'IBM Plex Mono', monospace;
-  font-size: .74rem; letter-spacing: .08em; text-transform: uppercase;
-  cursor: pointer; transition: border-color .2s, color .2s;
-}
-.btn-ghost-auth:hover { border-color: rgba(196,154,56,.35); color: #C49A38; }
-
-.signin-divider {
-  display: flex; align-items: center; gap: 1rem; margin: 1.4rem 0;
-  font-size: .6rem; color: #2a3a52; letter-spacing: .1em; text-transform: uppercase;
-  font-family: 'IBM Plex Mono', monospace;
-}
-.signin-divider::before,
-.signin-divider::after { content: ''; flex: 1; height: 1px; background: #0d1e35; }
-
-.signin-disclaimer {
-  margin-top: 1.75rem; text-align: center;
-  font-size: .6rem; line-height: 2; color: #2a3a52;
-  font-family: 'IBM Plex Mono', monospace;
-}
-
-/* ── AUTH FOOTER (DEJA VU exact) ── */
-#screen-auth footer {
-  background: #050a12; border-top: 1px solid #0d1e35;
-  padding: 3rem;
-}
-.auth-footer-inner {
-  max-width: 1400px; margin: 0 auto;
-  display: flex; flex-direction: column;
-  align-items: center; gap: .5rem;
-  text-align: center;
-}
-@media(min-width:768px){
-  .auth-footer-inner { flex-direction: row; justify-content: space-between; }
-}
-.auth-footer-brand {
-  font-family: 'Playfair Display', serif;
-  font-size: 1.3rem; color: #F0EDE6; font-style: italic; letter-spacing: -.01em;
-}
-.auth-footer-sub { font-size: .72rem; color: #2a3a52; margin-top: .2rem; }
-.auth-footer-copy { font-size: .72rem; color: #2a3a52; }
-
-/* ═══════════════════════════════
-   APP SCREEN
-═══════════════════════════════ */
-body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR', sans-serif; font-weight: 400; }
-#screen-app { display: none; min-height: 100dvh; background: var(--void); }
-
-/* ── Navbar ── */
-.app-nav {
-  position: fixed; top: 0; left: 0; right: 0; z-index: 200;
-  height: 84px; display: flex; align-items: center;
-  padding: 0 3rem; gap: 1.5rem;
-  background: rgba(5,10,18,.88); backdrop-filter: blur(32px);
-  border-bottom: 1px solid var(--border); transition: all .3s;
-}
-.app-nav.scrolled { background: rgba(5,10,18,.98); border-color: var(--border-b); }
-.nav-logo {
-  font-family: 'Cormorant Garamond', serif; font-size: 2.2rem;
-  font-weight: 600; font-style: italic; color: var(--text);
-  flex-shrink: 0; letter-spacing: -.01em;
-  text-shadow: 0 0 24px rgba(196,154,56,.18);
-}
-.nav-sep { width: 1px; height: 20px; background: var(--border); flex-shrink: 0; }
-.nav-tabs { display: flex; align-items: center; gap: .4rem; flex: 1; overflow-x: auto; scrollbar-width: none; min-width: 0; }
-.nav-tabs::-webkit-scrollbar { display: none; }
-.nav-tab {
-  padding: .6rem 1.5rem; border-radius: 9999px;
-  font-family: 'IBM Plex Mono', monospace; font-size: .9rem;
-  letter-spacing: .05em; text-transform: uppercase;
-  cursor: pointer; border: 1px solid transparent; transition: all .15s;
-  white-space: nowrap; color: var(--muted); background: transparent;
-}
-.nav-tab:hover { color: rgba(232,228,220,.75); border-color: var(--border-b); }
-.nav-tab.active { color: var(--gold); border-color: var(--border-gold); background: rgba(201,169,98,.07); }
-.nav-tab.add { color: rgba(232,228,220,.2); border: 1px dashed rgba(232,228,220,.1); }
-.nav-tab.add:hover { color: var(--gold); border-color: var(--border-gold); }
-.nav-right { display: flex; align-items: center; gap: 1rem; flex-shrink: 0; }
-.nav-user {
-  font-family: 'IBM Plex Mono', monospace; font-size: .84rem;
-  color: var(--muted); max-width: 180px; overflow: hidden;
-  text-overflow: ellipsis; white-space: nowrap;
-}
-.btn-nav {
-  padding: .65rem 1.5rem; background: transparent;
-  border: 1px solid var(--border-b); border-radius: 9999px;
-  color: var(--muted); font-family: 'IBM Plex Mono', monospace;
-  font-size: .88rem; letter-spacing: .07em; text-transform: uppercase;
-  cursor: pointer; transition: all .15s;
-}
-.btn-nav:hover { border-color: var(--border-gold); color: var(--gold); }
-
-/* ── Layout ── */
-/* ── App body — always single column ── */
-.app-body {
-  margin-top: 84px;
-  display: flex; flex-direction: column;
-  min-height: calc(100dvh - 84px);
-  width: 100%;
-}
-
-/* ── Sticky control topbar (stock mode) ── */
-.app-topbar {
-  display: none;
-  position: sticky; top: 84px; z-index: 100;
-  background: rgba(5,10,18,.97);
-  backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
-  border-bottom: 1px solid var(--border);
-  padding: 1.25rem 3rem;
-}
-.app-topbar.visible { display: block; }
-.topbar-inner {
-  max-width: 1400px; margin: 0 auto;
-  display: flex; align-items: center; gap: 1.5rem;
-}
-.topbar-search { flex: 0 0 320px; position: relative; }
-.topbar-stock {
-  flex: 1; display: flex; align-items: center; gap: 1.1rem;
-  border-left: 1px solid var(--border); padding-left: 1.5rem; overflow: hidden;
-}
-.topbar-ticker {
-  font-family: 'Cormorant Garamond', serif; font-size: 2.8rem;
-  font-style: italic; font-weight: 600; color: var(--text); line-height: 1;
-  flex-shrink: 0;
-}
-.topbar-info { display: flex; flex-direction: column; gap: .2rem; overflow: hidden; }
-.topbar-name {
-  font-size: 1.1rem; color: var(--text-2); font-weight: 400;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-}
-.topbar-badge {
-  font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
-  padding: .28rem .8rem; border-radius: 9999px;
-  border: 1px solid var(--border-gold); color: var(--gold);
-  background: rgba(201,169,98,.06); letter-spacing: .1em; text-transform: uppercase;
-  display: inline-block; width: fit-content;
-}
-.topbar-actions { display: flex; align-items: center; gap: .75rem; flex-shrink: 0; }
-.topbar-guest {
-  font-family: 'IBM Plex Mono', monospace; font-size: .78rem;
-  color: rgba(201,169,98,.65); letter-spacing: .04em;
-  border: 1px solid rgba(201,169,98,.2); border-radius: 9999px;
-  padding: .45rem 1.2rem; white-space: nowrap;
-  cursor: pointer; transition: border-color .15s, color .15s;
-  background: none;
-}
-.topbar-guest:hover { color: var(--gold); border-color: rgba(201,169,98,.5); }
-
-/* ── Search (shared by topbar + welcome) ── */
-.search-wrap { position: relative; }
-.search-input {
-  width: 100%; padding: 1rem 1.4rem;
-  background: rgba(8,16,28,.9); border: 1px solid var(--border-b);
-  border-radius: .875rem; color: var(--text);
-  font-family: 'Noto Sans KR', sans-serif; font-size: 1.05rem; font-weight: 400;
-  outline: none; transition: border-color .2s, box-shadow .2s;
-}
-.search-input:focus {
-  border-color: rgba(201,169,98,.4);
-  box-shadow: 0 0 0 3px rgba(201,169,98,.06);
-}
-.search-input::placeholder { color: rgba(232,228,220,.2); }
-.search-dd {
-  position: absolute; top: calc(100% + .5rem); left: 0; right: 0;
-  background: #081828; border: 1px solid rgba(196,154,56,.15);
-  border-radius: 1rem; overflow: hidden; z-index: 300;
-  box-shadow: 0 20px 56px rgba(0,0,0,.7); display: none;
-}
-.search-dd.open { display: block; }
-.dd-item {
-  padding: 1.15rem 1.5rem; cursor: pointer;
-  display: flex; align-items: center; justify-content: space-between;
-  border-bottom: 1px solid var(--border); transition: background .1s;
-}
-.dd-item:last-child { border-bottom: none; }
-.dd-item:hover { background: rgba(201,169,98,.04); }
-.dd-name { font-size: 1.05rem; color: var(--text); font-weight: 400; }
-.dd-meta { display: flex; align-items: center; gap: .6rem; }
-.dd-ticker { font-family: 'IBM Plex Mono', monospace; font-size: .92rem; color: var(--gold); }
-.dd-mkt {
-  font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
-  padding: .2rem .65rem; border-radius: .45rem;
-  background: rgba(201,169,98,.07); color: var(--muted);
-  border: 1px solid var(--border-gold); letter-spacing: .07em;
-}
-.dd-msg { padding: 1.4rem; font-family: 'IBM Plex Mono', monospace; font-size: .84rem; color: var(--muted); text-align: center; }
-
-/* ── Get Insights button ── */
-.btn-brief {
-  padding: 1.1rem 2.4rem; background: var(--gold); color: var(--void);
-  border: none; border-radius: .75rem; font-family: 'IBM Plex Mono', monospace;
-  font-size: 1rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  cursor: pointer; position: relative; overflow: hidden;
-  transition: background .2s, transform .2s, box-shadow .2s;
-  display: flex; align-items: center; gap: .6rem; white-space: nowrap;
-}
-.btn-brief:hover:not(:disabled) {
-  background: var(--gold-b); transform: translateY(-1px);
-  box-shadow: 0 8px 28px rgba(196,154,56,.35);
-}
-.btn-brief:disabled { opacity: .35; cursor: not-allowed; transform: none; }
-.btn-save-stock {
-  background: transparent; border: 1px solid rgba(196,154,56,.35);
-  color: var(--gold); cursor: pointer;
-  font-family: 'IBM Plex Mono', monospace; font-size: .9rem;
-  letter-spacing: .05em; padding: .75rem 1.4rem; border-radius: .5rem;
-  transition: all .15s; white-space: nowrap; display: inline-flex; align-items: center; gap: .4rem;
-}
-.btn-save-stock:hover { background: rgba(196,154,56,.12); border-color: var(--gold); }
-.btn-remove-stock {
-  background: transparent; border: 1px solid rgba(232,228,220,.1);
-  color: rgba(232,228,220,.3); cursor: pointer;
-  font-family: 'IBM Plex Mono', monospace; font-size: .9rem;
-  letter-spacing: .05em; padding: .75rem 1.4rem; border-radius: .5rem;
-  transition: color .15s, border-color .15s; white-space: nowrap;
-}
-.btn-remove-stock:hover { color: var(--negative); border-color: rgba(217,95,95,.35); }
-
-/* ── Summary box ── */
-.summary-box {
-  display: none; background: var(--surface);
-  border: 1px solid var(--border); border-radius: 1.35rem;
-  overflow: hidden; margin-bottom: 1.5rem;
-}
-.summary-box.visible { display: block; }
-.summary-head {
-  padding: 1.25rem 1.5rem .9rem;
-  border-bottom: 1px solid var(--border);
-}
-.summary-label {
-  font-family: 'IBM Plex Mono', monospace; font-size: .75rem;
-  letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
-}
-.summary-body { padding: 1.25rem 1.75rem 1.6rem; }
-.summary-pills { display: flex; flex-wrap: wrap; gap: .6rem; margin-bottom: 1.25rem; }
-.summary-pill {
-  display: inline-flex; align-items: center; gap: .35rem;
-  padding: .45rem 1.1rem; border-radius: 9999px;
-  font-family: 'IBM Plex Mono', monospace; font-size: .8rem;
-  letter-spacing: .06em; font-weight: 600;
-}
-.summary-pill.pos { background: rgba(76,175,125,.22); color: #5CE89A; border: 1.5px solid rgba(76,175,125,.6); }
-.summary-pill.neg { background: rgba(217,95,95,.22); color: #FF6B6B; border: 1.5px solid rgba(217,95,95,.6); }
-.summary-pill.neu { background: rgba(201,169,98,.18); color: #E0C070; border: 1.5px solid rgba(201,169,98,.5); }
-.summary-verdict { font-size: 1.1rem; color: var(--text-2); line-height: 1.85; font-weight: 400; }
-
-/* ── Main content area ── */
-.app-content {
-  flex: 1; width: 100%;
-}
-.app-content-inner {
-  max-width: 1400px; margin: 0 auto;
-  padding: 3rem 3.5rem 5rem;
-}
-
-/* ── Welcome search bar (top) ── */
-.welcome-search-wrap {
-  width: 100%; padding: 2.5rem 3rem 0;
-  border-bottom: 1px solid var(--border);
-  background: rgba(5,10,18,.6);
-}
-.welcome-search-inner {
-  max-width: 760px; margin: 0 auto;
-  display: flex; flex-direction: column; gap: .7rem;
-  padding-bottom: 2rem;
-}
-.welcome-search-label {
-  font-family: 'IBM Plex Mono', monospace; font-size: .8rem;
-  letter-spacing: .25em; text-transform: uppercase; color: var(--muted);
-}
-.welcome-search-field {
-  position: relative;
-}
-.welcome-search-input {
-  width: 100%; padding: 1.5rem 2rem;
-  background: rgba(8,16,28,.9); border: 1px solid var(--border-b);
-  border-radius: 1.1rem; color: var(--text);
-  font-family: 'Noto Sans KR', sans-serif; font-size: 1.25rem; font-weight: 400;
-  outline: none; transition: border-color .2s, box-shadow .2s;
-}
-.welcome-search-input:focus {
-  border-color: rgba(201,169,98,.45);
-  box-shadow: 0 0 0 4px rgba(201,169,98,.07);
-}
-.welcome-search-input::placeholder { color: rgba(232,228,220,.2); }
-.welcome-search-icon {
-  position: absolute; right: 1.4rem; top: 50%; transform: translateY(-50%);
-  color: rgba(201,169,98,.4); pointer-events: none;
-}
-.welcome-search-dd {
-  position: absolute; top: calc(100% + .5rem); left: 0; right: 0;
-  background: #081828; border: 1px solid rgba(196,154,56,.15);
-  border-radius: 1rem; overflow: hidden; z-index: 300;
-  box-shadow: 0 20px 56px rgba(0,0,0,.7); display: none;
-}
-.welcome-search-dd.open { display: block; }
-
-/* ── Welcome content (below search) ── */
-.welcome-content {
-  display: flex; flex-direction: column; align-items: center;
-  text-align: center; padding: 8rem 3rem 4rem;
-  max-width: 700px; margin: 0 auto;
-}
-.welcome-label {
-  font-family: 'IBM Plex Mono', monospace; font-size: .82rem;
-  letter-spacing: .3em; text-transform: uppercase;
-  color: var(--gold); opacity: .8; margin-bottom: 1.5rem;
-}
-.welcome-title {
-  font-family: 'Cormorant Garamond', serif;
-  font-size: clamp(3.5rem, 5.5vw, 6.5rem); font-weight: 600; font-style: italic;
-  letter-spacing: -.02em; line-height: 1.05; color: var(--text);
-  margin-bottom: 1.25rem;
-  text-shadow: 0 2px 28px rgba(196,154,56,.1);
-}
-.welcome-divider {
-  width: 48px; height: 1px;
-  background: rgba(201,169,98,.4); margin: 0 auto 1.5rem;
-}
-.welcome-desc {
-  font-size: 1.15rem; color: var(--text-2); line-height: 1.9;
-  margin-bottom: 2.75rem; font-weight: 400; max-width: 520px;
-}
-.welcome-hints {
-  display: grid; grid-template-columns: repeat(3, 1fr); gap: .85rem;
-  width: 100%; margin-bottom: 2.75rem;
-}
-.welcome-hint {
-  background: rgba(8,16,28,.85); border: 1px solid var(--border);
-  border-radius: 1.1rem; padding: 1.4rem 1.1rem 1.2rem;
-  display: flex; flex-direction: column; gap: .55rem;
-  transition: border-color .2s; text-align: left;
-}
-.welcome-hint:hover { border-color: var(--border-gold); }
-.hint-icon { line-height: 1; margin-bottom: .2rem; }
-.hint-title {
-  font-family: 'IBM Plex Mono', monospace; font-size: .84rem;
-  color: var(--text); letter-spacing: .05em; font-weight: 500;
-}
-.hint-desc { font-size: .96rem; color: var(--muted); line-height: 1.7; font-weight: 400; }
-.btn-start {
-  display: inline-flex; align-items: center; gap: .7rem;
-  padding: 1.35rem 3.5rem; background: var(--gold); color: var(--void);
-  border: none; border-radius: .875rem; font-family: 'IBM Plex Mono', monospace;
-  font-size: 1.05rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
-  cursor: pointer; position: relative; overflow: hidden;
-  transition: background .2s, transform .2s, box-shadow .2s;
-}
-.btn-start:hover {
-  background: var(--gold-b); transform: translateY(-2px);
-  box-shadow: 0 8px 28px rgba(196,154,56,.35);
-}
-
-/* ── Brief meta ── */
-.brief-header {
-  display: flex; align-items: center; justify-content: space-between;
-  margin-bottom: 1.75rem; padding-bottom: 1.25rem;
-  border-bottom: 1px solid var(--border);
-}
-.brief-meta {
-  display: flex; align-items: center; gap: .65rem;
-  font-family: 'IBM Plex Mono', monospace; font-size: .82rem;
-  color: var(--muted); letter-spacing: .1em; text-transform: uppercase;
-}
-.brief-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--gold); flex-shrink: 0; }
-.brief-count {
-  font-family: 'IBM Plex Mono', monospace; font-size: .82rem;
-  color: var(--muted); letter-spacing: .04em;
-}
-
-/* ── Loader ── */
-.loader {
-  width: 40px; height: 40px; border: 2px solid var(--border-b);
-  border-top-color: var(--gold); border-radius: 50%;
-  animation: spin .75s linear infinite; margin: 0 auto 1.5rem;
-}
-.loader-label {
-  font-family: 'IBM Plex Mono', monospace; font-size: .92rem;
-  color: var(--muted); letter-spacing: .1em; text-transform: uppercase; font-weight: 500;
-}
-
-/* ── News cards ── */
-.cards-grid { display: grid; gap: 1.5rem; }
-.news-card {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 1.25rem; overflow: hidden;
-  transition: border-color .2s, box-shadow .2s, transform .2s;
-  position: relative;
-}
-.news-card.up   { border-color: rgba(76,175,125,.18); }
-.news-card.down { border-color: rgba(217,95,95,.18); }
-.news-card.flat { border-color: rgba(201,169,98,.15); }
-.news-card:hover {
-  border-color: rgba(232,228,220,.13);
-  box-shadow: 0 10px 36px rgba(0,0,0,.32);
-  transform: translateY(-1px);
-}
-.news-card::before {
-  content: ''; position: absolute; top: 0; left: 0; width: 5px; height: 100%;
-}
-.news-card.up::before   { background: linear-gradient(180deg, #5CE89A, rgba(76,175,125,.2)); }
-.news-card.down::before { background: linear-gradient(180deg, #FF6B6B, rgba(217,95,95,.2)); }
-.news-card.flat::before { background: linear-gradient(180deg, #E0C070, rgba(201,169,98,.2)); }
-.card-head {
-  padding: 2rem 2.2rem 1.6rem 2.4rem;
-  cursor: pointer; display: flex; flex-direction: column; gap: 1rem;
-}
-.card-top-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 1rem; }
-.card-title { font-size: 1.25rem; color: var(--text); line-height: 1.65; font-weight: 500; flex: 1; }
-.card-toggle {
-  font-family: 'IBM Plex Mono', monospace; font-size: .88rem;
-  color: var(--muted); white-space: nowrap; flex-shrink: 0;
-  transition: color .15s; padding-top: .2rem; font-weight: 500;
-}
-.card-toggle:hover { color: var(--gold); }
-.card-verdict-row { display: flex; align-items: flex-start; gap: .75rem; flex-wrap: wrap; }
-.sentiment-badge {
-  display: inline-flex; align-items: center; gap: .45rem;
-  padding: .55rem 1.3rem; border-radius: 9999px;
-  font-family: 'IBM Plex Mono', monospace; font-size: .92rem;
-  font-weight: 700; letter-spacing: .1em; text-transform: uppercase; flex-shrink: 0;
-}
-.sentiment-badge.up   { background: rgba(76,175,125,.22); color: #5CE89A; border: 1.5px solid rgba(76,175,125,.6); }
-.sentiment-badge.down { background: rgba(217,95,95,.22);  color: #FF6B6B; border: 1.5px solid rgba(217,95,95,.6); }
-.sentiment-badge.flat { background: rgba(201,169,98,.18); color: #E0C070; border: 1.5px solid rgba(201,169,98,.5); }
-.card-verdict { font-size: 1.12rem; color: var(--text-2); line-height: 1.7; font-weight: 400; flex: 1; }
-.card-detail {
-  padding: 0 2.2rem 0 2.4rem; max-height: 0; overflow: hidden;
-  transition: max-height .38s cubic-bezier(.4,0,.2,1), padding .38s;
-}
-.card-detail.open { max-height: 2000px; padding-bottom: 2rem; }
-.card-summary-text {
-  font-size: 1.12rem; color: var(--text-2); line-height: 1.9;
-  margin-bottom: 1.4rem; padding-bottom: 1.4rem;
-  border-bottom: 1px solid var(--border); font-weight: 400;
-}
-.impact-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.2rem; }
-.impact { background: var(--surface-2); border-radius: .9rem; padding: 1.3rem 1.5rem; }
-.impact-lbl {
-  font-family: 'IBM Plex Mono', monospace; font-size: .88rem;
-  letter-spacing: .12em; text-transform: uppercase;
-  color: var(--muted); margin-bottom: .6rem; font-weight: 500;
-}
-.impact-val { font-size: 1.1rem; color: var(--text); line-height: 1.8; font-weight: 400; }
-.card-link-row { display: flex; justify-content: flex-end; }
-.card-link {
-  color: var(--muted); text-decoration: none;
-  font-family: 'IBM Plex Mono', monospace; font-size: .82rem;
-  transition: color .15s; letter-spacing: .04em;
-}
-.card-link:hover { color: var(--gold); }
-
-/* ── 주가 표시 ── */
-.topbar-price {
-  display: none; flex-direction: column; align-items: flex-end;
-  flex-shrink: 0; border-left: 1px solid var(--border); padding-left: 1.5rem;
-}
-.price-val {
-  font-family: 'IBM Plex Mono', monospace; font-size: 1.4rem;
-  color: var(--text); font-weight: 500; line-height: 1.2;
-}
-.price-chg { font-family: 'IBM Plex Mono', monospace; font-size: .8rem; margin-top: .15rem; }
-.price-chg.pos { color: var(--positive); }
-.price-chg.neg { color: var(--negative); }
-
-/* ── 포트폴리오 요약 (홈화면) ── */
-#portfolio-summary { width: 100%; margin-top: 2rem; }
-.ps-header {
-  display: flex; align-items: baseline; gap: .75rem; margin-bottom: .85rem;
-}
-.ps-label {
-  font-family: 'IBM Plex Mono', monospace; font-size: .75rem;
-  letter-spacing: .2em; text-transform: uppercase; color: var(--muted);
-}
-.ps-sublabel {
-  font-family: 'IBM Plex Mono', monospace; font-size: .7rem;
-  color: rgba(232,228,220,.2); letter-spacing: .04em;
-}
-.portfolio-summary-grid {
-  display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: .65rem;
-}
-.ps-item {
-  background: var(--surface); border: 1px solid var(--border);
-  border-radius: 1rem; padding: 1rem 1.1rem; cursor: pointer;
-  transition: border-color .15s, background .15s;
-}
-.ps-item:hover { border-color: var(--border-gold); background: rgba(201,169,98,.04); }
-.ps-ticker { font-family: 'Cormorant Garamond', serif; font-size: 1.05rem; font-weight: 600; font-style: italic; color: var(--text); margin-bottom: .15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ps-name { font-family: 'IBM Plex Mono', monospace; font-size: .68rem; color: rgba(232,228,220,.3); margin-bottom: .55rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.ps-badge {
-  font-family: 'IBM Plex Mono', monospace; font-size: .7rem;
-  padding: .22rem .65rem; border-radius: 9999px; font-weight: 600;
-  display: inline-block;
-}
-.ps-badge.pos { background: rgba(76,175,125,.22); color: #5CE89A; border: 1px solid rgba(76,175,125,.5); }
-.ps-badge.neg { background: rgba(217,95,95,.22); color: #FF6B6B; border: 1px solid rgba(217,95,95,.5); }
-.ps-badge.neu { background: rgba(201,169,98,.18); color: #E0C070; border: 1px solid rgba(201,169,98,.4); }
-.ps-unanalyzed { font-family: 'IBM Plex Mono', monospace; font-size: .7rem; color: rgba(232,228,220,.18); }
-
-/* 캐시 표시 */
-.cache-notice {
-  font-family: 'IBM Plex Mono', monospace; font-size: .72rem;
-  color: rgba(201,169,98,.5); letter-spacing: .04em;
-}
-
-/* ── Mobile ── */
-@media (max-width: 960px) {
-  .app-topbar { padding: .85rem 1.25rem; }
-  .topbar-inner { gap: .75rem; flex-wrap: wrap; }
-  .topbar-search { flex: 0 0 100%; order: 1; }
-  .topbar-stock { border-left: none; padding-left: 0; order: 2; flex: 1; }
-  .topbar-price { border-left: none; padding-left: 0; }
-  .topbar-actions { order: 3; flex-wrap: wrap; }
-  .topbar-ticker { font-size: 1.8rem; }
-  .impact-row { grid-template-columns: 1fr; }
-  .nav-user { display: none; }
-  .app-nav { padding: 0 1.25rem; height: 72px; }
-  .welcome-hints { grid-template-columns: 1fr; }
-  .welcome-content { padding: 4rem 1.5rem 3rem; }
-  .app-content-inner { padding: 1.5rem 1.25rem 4rem; }
-  #screen-auth nav { padding: 1.25rem; }
-  .portfolio-summary-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+@media(max-width:960px){
+  .app-topbar{padding:.85rem 1.25rem}
+  .topbar-inner{gap:.75rem;flex-wrap:wrap}
+  .topbar-search{flex:0 0 100%;order:1}
+  .topbar-stock{border-left:none;padding-left:0;order:2;flex:1}
+  .topbar-price{border-left:none;padding-left:0}
+  .topbar-actions{order:3;flex-wrap:wrap}
+  .topbar-ticker{font-size:1.8rem}
+  .impact-row{grid-template-columns:1fr}
+  .nav-user{display:none}
+  .app-nav{padding:0 1.25rem;height:72px}
+  .welcome-hints{grid-template-columns:1fr}
+  .welcome-content{padding:4rem 1.5rem 3rem}
+  .app-content-inner{padding:1.5rem 1.25rem 4rem}
+  #screen-auth nav{padding:1.25rem}
+  .portfolio-summary-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
+  .wl-panel{width:100%}
 }
 </style>
 </head>
 
 <body class="selection:bg-amber-700/30 selection:text-white" style="background:#050a12;color:#F0EDE6">
-
-<!-- Noise -->
 <svg class="noise" xmlns="http://www.w3.org/2000/svg">
   <filter id="n"><feTurbulence type="fractalNoise" baseFrequency=".8" numOctaves="4" stitchTiles="stitch"/></filter>
   <rect width="100%" height="100%" filter="url(#n)"/>
 </svg>
 
-<!-- ═══════════════════════════════
-     AUTH SCREEN
-═══════════════════════════════ -->
+<!-- AUTH SCREEN -->
 <div id="screen-auth">
-
-  <!-- NAV (DEJA VU exact) -->
   <nav>
     <span class="auth-logo">Bulletin</span>
     <div class="auth-nav-links">
@@ -961,20 +361,12 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
     <button class="auth-nav-cta" onclick="document.getElementById('signin').scrollIntoView({behavior:'smooth'})">Get Started</button>
   </nav>
 
-  <!-- HERO (DEJA VU exact structure) -->
   <header class="auth-hero">
     <div class="auth-hero-bg">
-      <img
-        src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=1920"
-        alt="Stock market charts">
+      <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=1920" alt="Stock market charts">
     </div>
-    <!-- 우측 hover 패널 -->
     <div class="hero-edge-panel">
-      <div class="hero-edge-tab">
-        <div class="hero-edge-tab-line">
-          <div class="hero-edge-tab-dot"></div>
-        </div>
-      </div>
+      <div class="hero-edge-tab"><div class="hero-edge-tab-line"><div class="hero-edge-tab-dot"></div></div></div>
       <div class="hero-edge-content">
         <p class="hero-edge-label">What is Bulletin?</p>
         <div class="hero-edge-stat">
@@ -982,8 +374,8 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
           <div class="hero-edge-stat-desc">Every article analyzed and classified — Bullish, Bearish, or Neutral — in seconds.</div>
         </div>
         <div class="hero-edge-stat">
-          <div class="hero-edge-stat-num"><span>10</span> Stocks</div>
-          <div class="hero-edge-stat-desc">Track up to 10 positions. KRX, NYSE, NASDAQ — all in one place.</div>
+          <div class="hero-edge-stat-num"><span>20</span> Stocks</div>
+          <div class="hero-edge-stat-desc">Track up to 20 positions across custom groups. KRX, NYSE, NASDAQ — all in one place.</div>
         </div>
         <div class="hero-edge-stat">
           <div class="hero-edge-stat-num"><span>2</span> Horizons</div>
@@ -992,118 +384,41 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
       </div>
     </div>
     <div class="auth-hero-body">
-      <p class="auth-hero-eyebrow">포트폴리오 인텔리전스 · AI 기반</p>
+      <p class="auth-hero-eyebrow">관심종목 인텔리전스 · AI 기반</p>
       <h1 class="auth-hero-title">B<span style="color:#C49A38;text-shadow:0 0 20px rgba(196,154,56,.5)">u</span>lletin</h1>
       <div style="width:48px;height:1px;background:rgba(196,154,56,.55);margin:.25rem 0;box-shadow:0 0 10px rgba(196,154,56,.3)"></div>
-      <p class="auth-hero-sub">AI-analyzed news briefings for every stock in your portfolio. Know what moves your positions — and why.</p>
-    </div><!-- /auth-hero-body -->
-
-    <!-- 하단 chevron -->
-    <div class="auth-scroll-indicator">
-      <svg class="auth-chevron" xmlns="http://www.w3.org/2000/svg" width="140" height="70" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width=".7" stroke-linecap="round" stroke-linejoin="round">
-        <polyline points="2 2 12 10 22 2"/>
-      </svg>
+      <p class="auth-hero-sub">AI-analyzed news briefings for every stock in your watchlist. Know what moves your positions — and why.</p>
     </div>
-
+    <div class="auth-scroll-indicator">
+      <svg class="auth-chevron" xmlns="http://www.w3.org/2000/svg" width="140" height="70" viewBox="0 0 24 12" fill="none" stroke="currentColor" stroke-width=".7" stroke-linecap="round" stroke-linejoin="round"><polyline points="2 2 12 10 22 2"/></svg>
+    </div>
   </header>
 
-  <!-- ARTISTIC STATEMENT (DEJA VU exact) -->
   <section class="auth-statement">
     <div class="auth-statement-inner">
-      <!-- pen-tool → trend-up icon -->
-      <svg class="auth-statement-icon" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto">
-        <polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/>
-        <polyline points="16 7 22 7 22 13"/>
-      </svg>
+      <svg class="auth-statement-icon" xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>
       <h2 class="auth-statement-quote">"Where data becomes conviction."</h2>
-      <p class="auth-statement-body">
-        In a market flooded with noise, Bulletin cuts through. Every briefing scans breaking news across Korean and global markets, classifies each signal — Bullish, Bearish, or Neutral — and delivers a clear verdict for your exact holdings. No guesswork. No wasted morning.
-      </p>
+      <p class="auth-statement-body">In a market flooded with noise, Bulletin cuts through. Every briefing scans breaking news across Korean and global markets, classifies each signal — Bullish, Bearish, or Neutral — and delivers a clear verdict for your exact holdings. No guesswork. No wasted morning.</p>
     </div>
   </section>
 
-  <!-- PORTFOLIO GRID (DEJA VU exact — finance objects, NO people) -->
   <section class="auth-gallery" id="gallery">
     <div class="auth-gallery-inner">
       <div class="auth-gallery-header">
         <h3 class="auth-gallery-title">Markets We Cover</h3>
-        <a href="#signin" class="auth-gallery-link">
-          Start Free
-          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg>
-        </a>
+        <a href="#signin" class="auth-gallery-link">Start Free <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="7" y1="17" x2="17" y2="7"/><polyline points="7 7 17 7 17 17"/></svg></a>
       </div>
-
       <div class="gallery-uniform">
-        <!-- 1: Candlestick chart close-up -->
-        <div class="gallery-item">
-          <div class="gallery-img-wrap">
-            <img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=700&h=520" alt="Stock market candlestick chart">
-          </div>
-          <div class="gallery-cap">
-            <span>NYSE · NASDAQ</span>
-            <span class="cap-right">US Equities</span>
-          </div>
-        </div>
-
-        <!-- 2: Gold bars / commodity -->
-        <div class="gallery-item">
-          <div class="gallery-img-wrap">
-            <img src="https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&q=80&w=700&h=700" alt="Gold bars">
-          </div>
-          <div class="gallery-cap">
-            <span>Commodities</span>
-            <span class="cap-right">Gold · Macro</span>
-          </div>
-        </div>
-
-        <!-- 3: Multi-screen trading terminal -->
-        <div class="gallery-item">
-          <div class="gallery-img-wrap">
-            <img src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&q=80&w=700&h=460" alt="Trading terminal screens">
-          </div>
-          <div class="gallery-cap">
-            <span>Live Feeds</span>
-            <span class="cap-right">Real-time Data</span>
-          </div>
-        </div>
-
-        <!-- 4: Korean stock ticker board -->
-        <div class="gallery-item">
-          <div class="gallery-img-wrap">
-            <img src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&q=80&w=700&h=500" alt="Candlestick chart data">
-          </div>
-          <div class="gallery-cap">
-            <span>KRX · KOSPI</span>
-            <span class="cap-right">Korean Markets</span>
-          </div>
-        </div>
-
-        <!-- 5: Circuit / AI chip -->
-        <div class="gallery-item">
-          <div class="gallery-img-wrap">
-            <img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=700&h=560" alt="AI processor chip">
-          </div>
-          <div class="gallery-cap">
-            <span>AI Analysis</span>
-            <span class="cap-right">Groq · LLaMA</span>
-          </div>
-        </div>
-
-        <!-- 6: ETF / fund instruments -->
-        <div class="gallery-item">
-          <div class="gallery-img-wrap">
-            <img src="https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&q=80&w=700&h=480" alt="Financial instruments">
-          </div>
-          <div class="gallery-cap">
-            <span>ETFs · Funds</span>
-            <span class="cap-right">KODEX · TIGER</span>
-          </div>
-        </div>
+        <div class="gallery-item"><div class="gallery-img-wrap"><img src="https://images.unsplash.com/photo-1611974789855-9c2a0a7236a3?auto=format&fit=crop&q=80&w=700&h=520" alt="Stock market candlestick chart"></div><div class="gallery-cap"><span>NYSE · NASDAQ</span><span class="cap-right">US Equities</span></div></div>
+        <div class="gallery-item"><div class="gallery-img-wrap"><img src="https://images.unsplash.com/photo-1610375461246-83df859d849d?auto=format&fit=crop&q=80&w=700&h=700" alt="Gold bars"></div><div class="gallery-cap"><span>Commodities</span><span class="cap-right">Gold · Macro</span></div></div>
+        <div class="gallery-item"><div class="gallery-img-wrap"><img src="https://images.unsplash.com/photo-1642790106117-e829e14a795f?auto=format&fit=crop&q=80&w=700&h=460" alt="Trading terminal screens"></div><div class="gallery-cap"><span>Live Feeds</span><span class="cap-right">Real-time Data</span></div></div>
+        <div class="gallery-item"><div class="gallery-img-wrap"><img src="https://images.unsplash.com/photo-1590283603385-17ffb3a7f29f?auto=format&fit=crop&q=80&w=700&h=500" alt="Candlestick chart data"></div><div class="gallery-cap"><span>KRX · KOSPI</span><span class="cap-right">Korean Markets</span></div></div>
+        <div class="gallery-item"><div class="gallery-img-wrap"><img src="https://images.unsplash.com/photo-1620712943543-bcc4688e7485?auto=format&fit=crop&q=80&w=700&h=560" alt="AI processor chip"></div><div class="gallery-cap"><span>AI Analysis</span><span class="cap-right">Groq · LLaMA</span></div></div>
+        <div class="gallery-item"><div class="gallery-img-wrap"><img src="https://images.unsplash.com/photo-1559526324-593bc073d938?auto=format&fit=crop&q=80&w=700&h=480" alt="Financial instruments"></div><div class="gallery-cap"><span>ETFs · Funds</span><span class="cap-right">KODEX · TIGER</span></div></div>
       </div>
     </div>
   </section>
 
-  <!-- PROCESS (DEJA VU exact) -->
   <section class="auth-process" id="how-it-works">
     <div class="auth-process-inner">
       <div class="auth-process-head">
@@ -1111,156 +426,107 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
         <p class="auth-process-sub">Three steps from market open to clear conviction. No noise, no filler — just the signals that matter.</p>
       </div>
       <div class="auth-process-grid">
-        <div>
-          <span class="process-num">01</span>
-          <h4 class="process-name">Build Your Watchlist</h4>
-          <p class="process-desc">Add up to 10 stocks from Korean (KRX) or US markets. Bulletin supports major indices, ETFs, and individual equities.</p>
-        </div>
-        <div>
-          <span class="process-num">02</span>
-          <h4 class="process-name">AI Scans the News</h4>
-          <p class="process-desc">The model reads up to 10 recent articles per stock, selects the 5 most impactful, and classifies each as Bullish, Bearish, or Neutral.</p>
-        </div>
-        <div>
-          <span class="process-num">03</span>
-          <h4 class="process-name">Get Your Briefing</h4>
-          <p class="process-desc">One tap delivers a clear verdict, one-line summary, and short- and long-term impact per article — so you act with confidence.</p>
-        </div>
+        <div><span class="process-num">01</span><h4 class="process-name">Build Your Watchlist</h4><p class="process-desc">Add up to 20 stocks from Korean (KRX) or US markets, organized by your own custom groups.</p></div>
+        <div><span class="process-num">02</span><h4 class="process-name">AI Scans the News</h4><p class="process-desc">The model reads up to 10 recent articles per stock, selects the 5 most impactful, and classifies each as Bullish, Bearish, or Neutral.</p></div>
+        <div><span class="process-num">03</span><h4 class="process-name">Get Your Briefing</h4><p class="process-desc">One tap delivers a clear verdict, one-line summary, and short- and long-term impact per article — so you act with confidence.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- STUDIO / FEATURES (DEJA VU split image + text) -->
   <section class="auth-features" id="features">
     <div class="auth-features-inner">
-      <!-- Image side -->
-      <div class="features-img-wrap">
-        <img
-          src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=900"
-          alt="Financial data on screens">
-      </div>
-      <!-- Text side -->
+      <div class="features-img-wrap"><img src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=900" alt="Financial data on screens"></div>
       <div>
         <h3 class="features-heading">Intelligence built for active investors</h3>
         <p class="features-body">Bulletin isn't a news feed — it's a decision layer. Every briefing is structured around what actually matters: signal direction, time horizon, and magnitude.</p>
         <div class="feature-list">
-          <div class="feature-item">
-            <div class="feature-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg>
-            </div>
-            <div>
-              <div class="feature-name">Bullish / Bearish / Neutral Signals</div>
-              <div class="feature-desc">Every article is classified so you instantly know the direction of market pressure on your stock.</div>
-            </div>
-          </div>
-          <div class="feature-item">
-            <div class="feature-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-            </div>
-            <div>
-              <div class="feature-name">Short & Long-term Impact</div>
-              <div class="feature-desc">Separate outlook for 1–4 weeks and 3 months+ so you can calibrate your position horizon.</div>
-            </div>
-          </div>
-          <div class="feature-item">
-            <div class="feature-icon">
-              <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>
-            </div>
-            <div>
-              <div class="feature-name">KRX + NYSE + NASDAQ</div>
-              <div class="feature-desc">Korean stocks via Naver News API, US equities via Finnhub — all in one unified briefing view.</div>
-            </div>
-          </div>
+          <div class="feature-item"><div class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/></svg></div><div><div class="feature-name">Bullish / Bearish / Neutral Signals</div><div class="feature-desc">Every article is classified so you instantly know the direction of market pressure on your stock.</div></div></div>
+          <div class="feature-item"><div class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg></div><div><div class="feature-name">Short &amp; Long-term Impact</div><div class="feature-desc">Separate outlook for 1–4 weeks and 3 months+ so you can calibrate your position horizon.</div></div></div>
+          <div class="feature-item"><div class="feature-icon"><svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg></div><div><div class="feature-name">KRX + NYSE + NASDAQ</div><div class="feature-desc">Korean stocks via Naver News API, US equities via Finnhub — all in one unified briefing view.</div></div></div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- TESTIMONIAL (DEJA VU exact) -->
   <section class="auth-testimonial">
     <div class="auth-testimonial-inner">
-      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#404040" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 1.75rem">
-        <path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2zM5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/>
-      </svg>
+      <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#404040" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin:0 auto 1.75rem"><path d="M16 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2zM5 3a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2 1 1 0 0 1 1 1v1a2 2 0 0 1-2 2 1 1 0 0 0-1 1v2a1 1 0 0 0 1 1 6 6 0 0 0 6-6V5a2 2 0 0 0-2-2z"/></svg>
       <p class="testimonial-quote">"I used to spend 40 minutes every morning scanning articles. Now I get the same clarity in under 2 minutes. Bulletin changed how I start my trading day."</p>
       <p class="testimonial-author">— Early Access User · KOSPI Investor</p>
     </div>
   </section>
 
-  <!-- SIGN IN (replaces DEJA VU booking form, same layout) -->
   <section class="auth-signin" id="signin">
     <div class="auth-signin-inner">
       <div class="signin-header">
         <span class="signin-label">Get started free</span>
         <h2 class="signin-title">Start reading<br>the market</h2>
-        <p class="signin-desc">Track up to 10 stocks. AI-analyzed briefings on demand. Free to use — sign in with Google to save your portfolio.</p>
+        <p class="signin-desc">Track up to 20 stocks across custom groups. AI-analyzed briefings on demand. Free — sign in with Google to save your watchlist.</p>
       </div>
       <div class="signin-rule"></div>
-
       <button onclick="handleGoogleLogin()" class="btn-g">
         <span class="sh"></span>
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0">
-          <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
-          <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
-          <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/>
-          <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
-        </svg>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" style="flex-shrink:0"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
         Continue with Google
       </button>
-
       <div class="signin-divider">or</div>
-
       <button onclick="handleGuestMode()" class="btn-ghost-auth">Browse as Guest</button>
-
       <p class="signin-disclaimer">Not investment advice. All investment decisions are your own.</p>
     </div>
   </section>
 
-  <!-- FOOTER (DEJA VU exact) -->
   <footer>
     <div class="auth-footer-inner">
-      <div>
-        <div class="auth-footer-brand">Bulletin.</div>
-        <div class="auth-footer-sub">Portfolio Intelligence Platform</div>
-      </div>
+      <div><div class="auth-footer-brand">Bulletin.</div><div class="auth-footer-sub">Market Intelligence Platform</div></div>
       <div class="auth-footer-copy">© 2025 Bulletin. Not investment advice.</div>
     </div>
   </footer>
+</div>
 
-</div><!-- /screen-auth -->
-
-
-<!-- ═══════════════════════════════
-     APP SCREEN
-═══════════════════════════════ -->
+<!-- APP SCREEN -->
 <div id="screen-app">
 
   <nav class="app-nav" id="app-nav">
     <div class="nav-logo fd" onclick="goHome()" style="cursor:pointer">Bulletin</div>
-    <div class="nav-sep"></div>
-    <div class="nav-tabs" id="nav-tabs"></div>
     <div class="nav-right">
+      <button class="btn-watchlist-nav" id="btn-watchlist" onclick="openWatchlist()">관심종목 <span id="wl-count"></span></button>
+      <div class="nav-sep"></div>
       <span class="nav-user fm" id="nav-user"></span>
       <button class="btn-nav fm" id="btn-auth-action"></button>
     </div>
   </nav>
 
+  <!-- 관심종목 패널 -->
+  <div class="wl-overlay" id="wl-overlay" onclick="closeWatchlist()"></div>
+  <div class="wl-panel" id="wl-panel">
+    <div class="wl-panel-hdr">
+      <div>
+        <div class="wl-panel-title">관심종목</div>
+        <div class="wl-panel-meta fm" id="wl-panel-meta"></div>
+      </div>
+      <button class="wl-panel-close" onclick="closeWatchlist()">×</button>
+    </div>
+    <div class="wl-panel-body" id="wl-panel-body"></div>
+    <div class="wl-panel-footer">
+      <button class="wl-add-group-btn" id="wl-add-group-btn" onclick="showCreateGroupForm()">+ 새 그룹 만들기</button>
+      <div class="wl-create-form" id="wl-create-form">
+        <input class="wl-group-input" id="wl-group-input" placeholder="그룹 이름 (예: 해외주식)" maxlength="20"
+          onkeydown="if(event.key==='Enter')confirmCreateGroup();if(event.key==='Escape')hideCreateGroupForm()">
+        <button class="wl-group-confirm" onclick="confirmCreateGroup()">확인</button>
+      </div>
+    </div>
+  </div>
+
   <div class="app-body" id="app-body">
 
-    <!-- STICKY TOPBAR (stock mode only) -->
     <div class="app-topbar" id="app-topbar">
       <div class="topbar-inner">
-
-        <!-- Search -->
         <div class="topbar-search">
           <div class="search-wrap">
-            <input id="search-input" class="search-input" type="text"
-              placeholder="종목 검색…" autocomplete="off"/>
+            <input id="search-input" class="search-input" type="text" placeholder="종목 검색…" autocomplete="off"/>
             <div class="search-dd" id="search-dd"></div>
           </div>
         </div>
-
-        <!-- Stock info -->
         <div class="topbar-stock">
           <span class="topbar-ticker fd" id="disp-ticker">—</span>
           <div class="topbar-info">
@@ -1268,34 +534,24 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
             <span class="topbar-badge fm" id="disp-market">—</span>
           </div>
         </div>
-
-        <!-- 주가 표시 (US만) -->
         <div class="topbar-price" id="topbar-price">
           <span class="price-val fm" id="price-val">—</span>
           <span class="price-chg fm" id="price-chg">—</span>
         </div>
-
-        <!-- Actions -->
         <div class="topbar-actions">
           <button id="guest-banner" class="topbar-guest" style="display:none" onclick="goToAuth()">게스트 · 로그인 →</button>
           <button class="btn-brief" id="btn-brief" onclick="fetchBriefing()">
-            <span class="sh"></span>
-            <span class="content fm">AI 분석</span>
+            <span class="sh"></span><span class="content fm">AI 분석</span>
           </button>
-          <button class="btn-save-stock fm" id="btn-save-stock" style="display:none" onclick="saveCurrentStock()">＋ 포트폴리오 저장</button>
-          <button class="btn-remove-stock fm" id="btn-remove-stock" style="display:none" onclick="confirmRemove()">✕ 포트폴리오 삭제</button>
+          <button class="btn-save-stock fm" id="btn-save-stock" style="display:none" onclick="showAddToWatchlistPopup()">＋ 관심종목 추가</button>
+          <button class="btn-remove-stock fm" id="btn-remove-stock" style="display:none" onclick="removeCurrentFromWatchlist()">✕ 관심종목 삭제</button>
         </div>
-
       </div>
     </div>
 
-    <!-- MAIN CONTENT -->
     <main class="app-content" id="app-content">
 
-      <!-- Welcome view (full-page) -->
       <div id="view-welcome" style="display:none;">
-
-        <!-- 상단: 검색창 full-width -->
         <div class="welcome-search-wrap">
           <div class="welcome-search-inner">
             <span class="welcome-search-label fm">종목 검색</span>
@@ -1307,55 +563,31 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
             </div>
           </div>
         </div>
-
-        <!-- 하단: 타이틀 + 힌트 중앙 -->
         <div class="welcome-content">
           <div class="welcome-label fm">AI 기반 분석</div>
-          <h2 class="welcome-title fd">Deeper intelligence<br>for your portfolio</h2>
+          <h2 class="welcome-title fd">Deeper intelligence<br>for your watchlist</h2>
           <div class="welcome-divider"></div>
           <p class="welcome-desc">위 검색창에서 종목을 찾아 AI 뉴스 분석을 받아보세요 — 호재·악재·중립 시그널과 단기·장기 영향을 한눈에 확인하세요.</p>
           <p id="guest-notice" style="display:none;font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(201,169,98,.6);letter-spacing:.04em;margin-top:-.5rem;margin-bottom:-.5rem;">게스트 모드: 검색 기록은 새로고침 시 초기화됩니다. 저장하려면 로그인하세요.</p>
-          <div id="portfolio-summary" style="display:none;">
+          <div id="watchlist-summary" style="display:none;">
             <div class="ps-header">
-              <span class="ps-label fm">내 포트폴리오</span>
+              <span class="ps-label fm">내 관심종목</span>
               <span class="ps-sublabel fm" id="ps-sublabel"></span>
             </div>
-            <div class="portfolio-summary-grid" id="portfolio-summary-grid"></div>
+            <div id="wl-summary-content"></div>
           </div>
           <div class="welcome-hints">
-            <div class="welcome-hint">
-              <div class="hint-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><polyline points="4,8 8,12 12,8 16,12 20,8"/></svg>
-              </div>
-              <div class="hint-title fm">실시간 뉴스</div>
-              <div class="hint-desc">KRX·미국 시장 최신 기사를 수량 제한 없이 수집</div>
-            </div>
-            <div class="welcome-hint">
-              <div class="hint-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
-              </div>
-              <div class="hint-title fm">AI 분석</div>
-              <div class="hint-desc">LLaMA 3.3이 각 시그널을 분류하고 노이즈를 걸러냅니다</div>
-            </div>
-            <div class="welcome-hint">
-              <div class="hint-icon">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
-              </div>
-              <div class="hint-title fm">두 가지 시각</div>
-              <div class="hint-desc">기사별 단기(1–4주) + 장기(3개월+) 영향 동시 분석</div>
-            </div>
+            <div class="welcome-hint"><div class="hint-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><polyline points="4,8 8,12 12,8 16,12 20,8"/></svg></div><div class="hint-title fm">실시간 뉴스</div><div class="hint-desc">KRX·미국 시장 최신 기사를 수량 제한 없이 수집</div></div>
+            <div class="welcome-hint"><div class="hint-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg></div><div class="hint-title fm">AI 분석</div><div class="hint-desc">LLaMA 3.3이 각 시그널을 분류하고 노이즈를 걸러냅니다</div></div>
+            <div class="welcome-hint"><div class="hint-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><rect x="3" y="4" width="18" height="16" rx="2"/><line x1="3" y1="10" x2="21" y2="10"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg></div><div class="hint-title fm">두 가지 시각</div><div class="hint-desc">기사별 단기(1–4주) + 장기(3개월+) 영향 동시 분석</div></div>
           </div>
         </div>
-
       </div>
 
-      <!-- Stock view -->
       <div id="view-stock" style="display:none;">
         <div class="app-content-inner">
           <div id="summary-box" class="summary-box">
-            <div class="summary-head">
-              <div class="summary-label fm">시그널 요약</div>
-            </div>
+            <div class="summary-head"><div class="summary-label fm">시그널 요약</div></div>
             <div class="summary-body">
               <div class="summary-pills" id="summary-pills"></div>
               <div class="summary-verdict" id="summary-verdict"></div>
@@ -1370,29 +602,21 @@ body { background: var(--void); color: var(--text); font-family: 'Noto Sans KR',
       </div>
 
     </main>
-
   </div>
-</div><!-- /screen-app -->
-
+</div>
 
 <script>
 // ━━━ State ━━━
-let sb = null, currentUser = null, isGuest = false;
-let portfolio = [], currentStock = null;
-let searchTimer = null, searchTimerW = null, appEntered = false, searchInited = false;
-let apiSecret = '';
-const briefCache = new Map(); // ticker → { analyses, ts }
-const priceCache = new Map(); // ticker → { data, ts }
-const BRIEF_TTL = 60 * 60 * 1000; // 1시간
-const PRICE_TTL = 5 * 60 * 1000;  // 5분
+let sb=null,currentUser=null,isGuest=false;
+let portfolio=[],groups=[],currentStock=null;
+let searchTimer=null,searchTimerW=null,appEntered=false,searchInited=false;
+let apiSecret='';
+const briefCache=new Map(),priceCache=new Map();
+const BRIEF_TTL=60*60*1000,PRICE_TTL=5*60*1000;
 
-function apiHeaders(extra = {}) {
-  const h = { ...extra };
-  if (apiSecret) h['X-Api-Key'] = apiSecret;
-  return h;
-}
+function apiHeaders(extra={}){const h={...extra};if(apiSecret)h['X-Api-Key']=apiSecret;return h;}
 
-const KR_STOCKS = [
+const KR_STOCKS=[
   {ticker:'005930',name:'삼성전자',market:'KR'},{ticker:'000660',name:'SK하이닉스',market:'KR'},
   {ticker:'207940',name:'삼성바이오로직스',market:'KR'},{ticker:'005380',name:'현대차',market:'KR'},
   {ticker:'035420',name:'NAVER',market:'KR'},{ticker:'035720',name:'카카오',market:'KR'},
@@ -1421,8 +645,7 @@ const KR_STOCKS = [
   {ticker:'304940',name:'TIGER K-게임',market:'KR'},{ticker:'139230',name:'TIGER 200 IT',market:'KR'},
   {ticker:'091170',name:'KODEX 은행',market:'KR'},
 ];
-
-const US_STOCKS = [
+const US_STOCKS=[
   {ticker:'AAPL',name:'Apple Inc.',market:'US'},{ticker:'MSFT',name:'Microsoft Corporation',market:'US'},
   {ticker:'NVDA',name:'NVIDIA Corporation',market:'US'},{ticker:'GOOGL',name:'Alphabet Inc.',market:'US'},
   {ticker:'AMZN',name:'Amazon.com Inc.',market:'US'},{ticker:'META',name:'Meta Platforms Inc.',market:'US'},
@@ -1446,549 +669,530 @@ const US_STOCKS = [
   {ticker:'DIS',name:'The Walt Disney Company',market:'US'},
   {ticker:'BABA',name:'Alibaba Group',market:'US'},
 ];
-async function initApp() {
-  try {
-    const res = await fetch('/api/config');
-    const cfg = await res.json();
-    apiSecret = cfg.apiSecret || '';
-    sb = window.supabase.createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
-    const { data:{ session } } = await sb.auth.getSession();
-    if (session?.user) { currentUser = session.user; enterApp(); return; }
-    sb.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session?.user && !appEntered) { currentUser = session.user; enterApp(); }
-      else if (event === 'SIGNED_OUT') { resetState(); goToAuth(); }
+
+// ━━━ Init ━━━
+async function initApp(){
+  try{
+    const res=await fetch('/api/config');
+    const cfg=await res.json();
+    apiSecret=cfg.apiSecret||'';
+    sb=window.supabase.createClient(cfg.supabaseUrl,cfg.supabaseAnonKey);
+    const{data:{session}}=await sb.auth.getSession();
+    if(session?.user){currentUser=session.user;enterApp();return;}
+    sb.auth.onAuthStateChange((event,session)=>{
+      if(event==='SIGNED_IN'&&session?.user&&!appEntered){currentUser=session.user;enterApp();}
+      else if(event==='SIGNED_OUT'){resetState();goToAuth();}
     });
-  } catch(e) {
-    console.error('Init:', e);
-    const desc = document.querySelector('.signin-desc');
-    if (desc) desc.textContent = '서비스 초기화에 실패했습니다. 페이지를 새로고침해 주세요.';
+  }catch(e){
+    console.error('Init:',e);
+    const desc=document.querySelector('.signin-desc');
+    if(desc)desc.textContent='서비스 초기화에 실패했습니다. 페이지를 새로고침해 주세요.';
   }
 }
 
 // ━━━ Auth ━━━
-async function handleGoogleLogin() {
-  if (!sb) { alert('Please try again in a moment.'); return; }
-  const { error } = await sb.auth.signInWithOAuth({ provider:'google', options:{ redirectTo: window.location.origin } });
-  if (error) alert('Login error: ' + error.message);
+async function handleGoogleLogin(){
+  if(!sb){showToast('잠시 후 다시 시도해 주세요.');return;}
+  const{error}=await sb.auth.signInWithOAuth({provider:'google',options:{redirectTo:window.location.origin}});
+  if(error)showToast('로그인 오류: '+error.message);
 }
-function handleGuestMode() { isGuest = true; currentUser = null; enterApp(); }
-async function handleLogout() { if (sb && !isGuest) await sb.auth.signOut(); resetState(); goToAuth(); }
-function resetState() { appEntered=false; searchInited=false; isGuest=false; currentUser=null; portfolio=[]; currentStock=null; }
-function goToAuth() {
-  document.getElementById('screen-auth').style.display = 'block';
-  document.getElementById('screen-app').style.display = 'none';
+function handleGuestMode(){isGuest=true;currentUser=null;enterApp();}
+async function handleLogout(){if(sb&&!isGuest)await sb.auth.signOut();resetState();goToAuth();}
+function resetState(){appEntered=false;searchInited=false;isGuest=false;currentUser=null;portfolio=[];groups=[];currentStock=null;}
+function goToAuth(){
+  document.getElementById('screen-auth').style.display='block';
+  document.getElementById('screen-app').style.display='none';
   window.scrollTo(0,0);
 }
 
 // ━━━ Enter App ━━━
-async function enterApp() {
-  if (appEntered) return;
-  appEntered = true;
-  isGuest = !currentUser;
-
-  document.getElementById('screen-auth').style.display = 'none';
-  document.getElementById('screen-app').style.display = 'block';
+async function enterApp(){
+  if(appEntered)return;
+  appEntered=true;
+  isGuest=!currentUser;
+  document.getElementById('screen-auth').style.display='none';
+  document.getElementById('screen-app').style.display='block';
   window.scrollTo(0,0);
-
-  const userEl = document.getElementById('nav-user');
-  const authBtn = document.getElementById('btn-auth-action');
-  if (currentUser) {
-    userEl.textContent = (currentUser.email||'').split('@')[0];
-    authBtn.textContent = '로그아웃'; authBtn.onclick = handleLogout;
-  } else {
-    userEl.textContent = '게스트';
-    authBtn.textContent = '로그인'; authBtn.onclick = goToAuth;
+  const userEl=document.getElementById('nav-user');
+  const authBtn=document.getElementById('btn-auth-action');
+  const wlBtn=document.getElementById('btn-watchlist');
+  if(currentUser){
+    userEl.textContent=(currentUser.email||'').split('@')[0];
+    authBtn.textContent='로그아웃';authBtn.onclick=handleLogout;
+    wlBtn.style.display='inline-flex';
+  }else{
+    userEl.textContent='게스트';
+    authBtn.textContent='로그인';authBtn.onclick=goToAuth;
+    wlBtn.style.display='none';
   }
-
-  const guestBtn = document.getElementById('guest-banner');
-  if (guestBtn) guestBtn.style.display = isGuest ? 'inline-flex' : 'none';
-  const guestNotice = document.getElementById('guest-notice');
-  if (guestNotice) guestNotice.style.display = isGuest ? 'block' : 'none';
-
-  portfolio = [];
-  if (currentUser && sb) await loadPortfolio();
-  renderTabs();
-  renderPortfolioSummary();
+  const guestBtn=document.getElementById('guest-banner');
+  if(guestBtn)guestBtn.style.display=isGuest?'inline-flex':'none';
+  const guestNotice=document.getElementById('guest-notice');
+  if(guestNotice)guestNotice.style.display=isGuest?'block':'none';
+  portfolio=[];groups=[];
+  if(currentUser&&sb){await loadGroups();await loadPortfolio();}
+  renderWatchlistPanel();
+  renderWatchlistSummary();
   showView('welcome');
   initSearch();
-
-  window.addEventListener('scroll', () => {
-    document.getElementById('app-nav')?.classList.toggle('scrolled', window.scrollY > 60);
-  }, {passive:true});
-
-  gsap.fromTo('#app-body', {opacity:0,y:16}, {opacity:1,y:0,duration:.6,ease:'power3.out'});
+  window.addEventListener('scroll',()=>{
+    document.getElementById('app-nav')?.classList.toggle('scrolled',window.scrollY>60);
+  },{passive:true});
+  gsap.fromTo('#app-body',{opacity:0,y:16},{opacity:1,y:0,duration:.6,ease:'power3.out'});
 }
 
-// ━━━ Portfolio ━━━
-async function loadPortfolio() {
-  const { data, error } = await sb.from('portfolios').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
-  if (!error && data) portfolio = data;
+// ━━━ Groups ━━━
+async function loadGroups(){
+  if(!currentUser||!sb)return;
+  const{data,error}=await sb.from('watchlist_groups').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
+  if(!error&&data)groups=data;
 }
-async function addToPortfolio(stock) {
-  if (isGuest) return;
-  if (portfolio.length >= 10) { alert('최대 10개까지 저장할 수 있습니다.'); return; }
-  const existing = portfolio.find(p=>p.ticker===stock.ticker);
-  if (existing) { selectStock(existing); return; }
-  try {
-    const { data, error } = await sb.from('portfolios').insert({user_id:currentUser.id,ticker:stock.ticker,name:stock.name,market:stock.market}).select().single();
-    if (!error && data) { portfolio.push(data); selectStock(data); }
-    else {
-      if (error?.code === '42P01') alert('Supabase 테이블이 없습니다. setup.sql을 실행해 주세요.');
-      else console.error('Portfolio save failed:', error?.message);
-    }
-  } catch(e) { console.error('Portfolio save error:', e.message); }
+async function createGroup(name){
+  if(!currentUser||!sb)return null;
+  const{data,error}=await sb.from('watchlist_groups').insert({user_id:currentUser.id,name:name.trim()}).select().single();
+  if(!error&&data){groups.push(data);return data;}
+  return null;
 }
-async function removeFromPortfolio(id) {
-  if (!sb || !currentUser) return;
-  const { error } = await sb.from('portfolios').delete().eq('id', id);
-  if (error) { console.error('Remove failed:', error.message); alert('종목 삭제에 실패했습니다. 다시 시도해 주세요.'); return; }
-  portfolio = portfolio.filter(p=>p.id!==id);
-  renderTabs();
-  if (currentStock?.id===id) { currentStock=null; showView('welcome'); hideSummaryBox(); hideTopbar(); }
-}
-function confirmRemove() {
-  if (confirm(`'${currentStock.name}' 을(를) 포트폴리오에서 삭제할까요?`)) removeFromPortfolio(currentStock.id);
-}
-
-// ━━━ Tabs ━━━
-function renderTabs() {
-  const c = document.getElementById('nav-tabs'); c.innerHTML='';
-  portfolio.forEach(s => {
-    const t = document.createElement('button');
-    t.className = 'nav-tab fm' + (currentStock?.ticker===s.ticker?' active':'');
-    t.textContent = s.market === 'KR' ? s.name : s.ticker;
-    t.title = s.market === 'KR' ? `${s.name} (${s.ticker})` : s.name;
-    t.onclick = () => selectStock(s);
-    c.appendChild(t);
-  });
-  if (!isGuest && portfolio.length < 10) {
-    const a = document.createElement('button');
-    a.className = 'nav-tab add fm';
-    a.textContent = '+ 추가'; a.onclick = focusSearch;
-    c.appendChild(a);
+async function deleteGroup(id){
+  if(!currentUser||!sb)return;
+  const{error}=await sb.from('watchlist_groups').delete().eq('id',id);
+  if(!error){
+    groups=groups.filter(g=>g.id!==id);
+    portfolio.forEach(p=>{if(p.group_id===id)p.group_id=null;});
+    renderWatchlistPanel();renderWatchlistSummary();
+    showToast('그룹이 삭제됐습니다');
   }
 }
 
-function selectStock(stock) {
-  // 이미 저장된 종목이면 id가 있는 포트폴리오 버전을 사용 (Remove 작동하려면 id 필요)
-  const inPortfolio = portfolio.find(p => p.ticker === stock.ticker);
-  currentStock = inPortfolio || stock;
-  document.getElementById('disp-ticker').textContent = currentStock.market === 'KR' ? currentStock.name : currentStock.ticker;
-  document.getElementById('disp-name').textContent = currentStock.market === 'KR' ? currentStock.ticker : currentStock.name;
-  document.getElementById('disp-market').textContent = currentStock.market==='KR'?'KRX · Korea Exchange':'NYSE / NASDAQ';
+// ━━━ Panel UI ━━━
+function showCreateGroupForm(){
+  document.getElementById('wl-create-form').classList.add('visible');
+  document.getElementById('wl-add-group-btn').style.display='none';
+  setTimeout(()=>document.getElementById('wl-group-input')?.focus(),50);
+}
+function hideCreateGroupForm(){
+  document.getElementById('wl-create-form').classList.remove('visible');
+  document.getElementById('wl-add-group-btn').style.display='';
+  const inp=document.getElementById('wl-group-input');
+  if(inp)inp.value='';
+}
+async function confirmCreateGroup(){
+  const inp=document.getElementById('wl-group-input');
+  if(!inp)return;
+  const name=inp.value.trim();
+  if(!name)return;
+  const group=await createGroup(name);
+  hideCreateGroupForm();
+  if(group){renderWatchlistPanel();showToast(`'${name}' 그룹이 만들어졌습니다`);}
+}
+function openWatchlist(){
+  document.getElementById('wl-overlay').classList.add('open');
+  document.getElementById('wl-panel').classList.add('open');
+}
+function closeWatchlist(){
+  document.getElementById('wl-overlay').classList.remove('open');
+  document.getElementById('wl-panel').classList.remove('open');
+  hideCreateGroupForm();closeGroupSelectPopup();
+}
+function renderWatchlistPanel(){
+  const body=document.getElementById('wl-panel-body');
+  const meta=document.getElementById('wl-panel-meta');
+  const countEl=document.getElementById('wl-count');
+  if(!body)return;
+  if(countEl)countEl.textContent=portfolio.length>0?`· ${portfolio.length}개`:'';
+  if(meta)meta.textContent=`${portfolio.length} / 20개`;
+  if(!currentUser){body.innerHTML='<div class="wl-empty-msg">로그인 후 관심종목을<br>저장할 수 있습니다</div>';return;}
+  if(portfolio.length===0){body.innerHTML='<div class="wl-empty-msg">관심종목이 없습니다<br>종목 검색 후 추가하세요</div>';return;}
+  const grouped={};const ungrouped=[];
+  groups.forEach(g=>{grouped[g.id]=[];});
+  portfolio.forEach(s=>{
+    if(s.group_id&&grouped[s.group_id]!==undefined)grouped[s.group_id].push(s);
+    else ungrouped.push(s);
+  });
+  let html='';
+  groups.forEach(g=>{
+    const stocks=grouped[g.id]||[];
+    html+=`<div class="wl-group-block"><div class="wl-group-hdr"><span class="wl-group-name">${esc(g.name)} <span class="wl-group-cnt">(${stocks.length})</span></span><button class="wl-group-del" onclick="event.stopPropagation();deleteGroup('${g.id}')" title="그룹 삭제">×</button></div>`;
+    if(stocks.length===0)html+=`<div style="padding:.5rem 2rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:rgba(232,228,220,.2)">비어있음</div>`;
+    stocks.forEach(s=>{html+=renderWlStockHtml(s);});
+    html+=`</div>`;
+  });
+  if(ungrouped.length>0){
+    if(groups.length>0)html+=`<div class="wl-group-block"><div class="wl-group-hdr"><span class="wl-group-name" style="color:var(--muted)">기타 <span class="wl-group-cnt">(${ungrouped.length})</span></span></div>`;
+    ungrouped.forEach(s=>{html+=renderWlStockHtml(s);});
+    if(groups.length>0)html+=`</div>`;
+  }
+  body.innerHTML=html;
+}
+function renderWlStockHtml(s){
+  const dn=s.market==='KR'?s.name:s.ticker;
+  const ds=s.market==='KR'?s.ticker:s.name;
+  return `<div class="wl-stock-item" onclick="closeWatchlist();selectStockById('${s.id}')"><div><div class="wl-stock-name">${esc(dn)}</div><div class="wl-stock-ticker">${esc(ds)}</div></div><button class="wl-stock-del" onclick="event.stopPropagation();removeFromWatchlist('${s.id}')" title="삭제">×</button></div>`;
+}
+
+// ━━━ Watchlist data ━━━
+async function loadPortfolio(){
+  const{data,error}=await sb.from('portfolios').select('*').eq('user_id',currentUser.id).order('created_at',{ascending:true});
+  if(!error&&data)portfolio=data;
+}
+async function addToWatchlist(stock,groupId){
+  if(isGuest){goToAuth();return;}
+  if(portfolio.length>=20){showToast('최대 20개까지 저장할 수 있습니다');return;}
+  if(portfolio.find(p=>p.ticker===stock.ticker)){showToast('이미 관심종목에 있습니다');return;}
+  try{
+    const{data,error}=await sb.from('portfolios').insert({user_id:currentUser.id,ticker:stock.ticker,name:stock.name,market:stock.market,group_id:groupId||null}).select().single();
+    if(!error&&data){
+      portfolio.push(data);
+      renderWatchlistPanel();renderWatchlistSummary();updateSaveRemoveButtons();
+      showToast(`${stock.market==='KR'?stock.name:stock.ticker} 관심종목에 추가됐습니다`);
+    }else if(error?.code==='42P01'){showToast('DB 테이블 오류. setup.sql을 확인해 주세요.');}
+  }catch(e){console.error('Watchlist save error:',e.message);}
+}
+async function removeFromWatchlist(id){
+  if(!sb||!currentUser)return;
+  const{error}=await sb.from('portfolios').delete().eq('id',id);
+  if(error){showToast('삭제에 실패했습니다');return;}
+  portfolio=portfolio.filter(p=>p.id!==id);
+  renderWatchlistPanel();renderWatchlistSummary();
+  if(currentStock?.id===id){currentStock=null;showView('welcome');hideSummaryBox();hideTopbar();}
+  else updateSaveRemoveButtons();
+  showToast('관심종목에서 삭제됐습니다');
+}
+function removeCurrentFromWatchlist(){
+  if(!currentStock)return;
+  const inWl=portfolio.find(p=>p.ticker===currentStock.ticker);
+  if(inWl)removeFromWatchlist(inWl.id);
+}
+
+// ━━━ 관심종목 추가 팝업 ━━━
+function showAddToWatchlistPopup(){
+  if(!currentStock)return;
+  closeGroupSelectPopup();
+  const saveBtn=document.getElementById('btn-save-stock');
+  const popup=document.createElement('div');
+  popup.id='gsp';popup.className='gsp';
+  if(groups.length===0){
+    popup.innerHTML=`<div class="gsp-hdr">그룹을 먼저 만들어 주세요</div><div class="gsp-new-form"><input class="gsp-new-input" id="gsp-inp" placeholder="그룹 이름 (예: 해외주식)" maxlength="20" onkeydown="if(event.key==='Enter')confirmGspCreate()"><div class="gsp-btns"><button class="gsp-ok" onclick="confirmGspCreate()">만들고 추가</button><button class="gsp-cancel" onclick="closeGroupSelectPopup()">취소</button></div></div>`;
+  }else{
+    let html=`<div class="gsp-hdr">그룹 선택</div>`;
+    groups.forEach(g=>{
+      const cnt=portfolio.filter(p=>p.group_id===g.id).length;
+      html+=`<div class="gsp-item" onclick="addToWatchlist(currentStock,'${g.id}');closeGroupSelectPopup()"><span>${esc(g.name)}</span><span class="gsp-cnt">${cnt}개</span></div>`;
+    });
+    html+=`<div class="gsp-create" onclick="showGspNewForm()">＋ 새 그룹 만들기</div>`;
+    popup.innerHTML=html;
+  }
+  saveBtn.parentElement.appendChild(popup);
+  setTimeout(()=>{document.getElementById('gsp-inp')?.focus();document.addEventListener('click',onOutsideGspClick);},10);
+}
+function showGspNewForm(){
+  const popup=document.getElementById('gsp');
+  if(!popup)return;
+  popup.innerHTML=`<div class="gsp-hdr">새 그룹 이름</div><div class="gsp-new-form"><input class="gsp-new-input" id="gsp-inp" placeholder="예: 해외주식, 국내주식" maxlength="20" onkeydown="if(event.key==='Enter')confirmGspCreate();if(event.key==='Escape')closeGroupSelectPopup()"><div class="gsp-btns"><button class="gsp-ok" onclick="confirmGspCreate()">만들고 추가</button><button class="gsp-cancel" onclick="closeGroupSelectPopup()">취소</button></div></div>`;
+  setTimeout(()=>document.getElementById('gsp-inp')?.focus(),30);
+}
+async function confirmGspCreate(){
+  const inp=document.getElementById('gsp-inp');
+  if(!inp)return;
+  const name=inp.value.trim();
+  if(!name)return;
+  closeGroupSelectPopup();
+  const group=await createGroup(name);
+  if(group&&currentStock)await addToWatchlist(currentStock,group.id);
+}
+function closeGroupSelectPopup(){
+  const p=document.getElementById('gsp');
+  if(p)p.remove();
+  document.removeEventListener('click',onOutsideGspClick);
+}
+function onOutsideGspClick(e){
+  const p=document.getElementById('gsp');
+  const saveBtn=document.getElementById('btn-save-stock');
+  if(p&&!p.contains(e.target)&&e.target!==saveBtn)closeGroupSelectPopup();
+}
+
+// ━━━ Stock selection ━━━
+function selectStockById(id){const s=portfolio.find(p=>p.id===id);if(s)selectStock(s);}
+function selectStock(stock){
+  const inWl=portfolio.find(p=>p.ticker===stock.ticker);
+  currentStock=inWl||stock;
+  document.getElementById('disp-ticker').textContent=currentStock.market==='KR'?currentStock.name:currentStock.ticker;
+  document.getElementById('disp-name').textContent=currentStock.market==='KR'?currentStock.ticker:currentStock.name;
+  document.getElementById('disp-market').textContent=currentStock.market==='KR'?'KRX · Korea Exchange':'NYSE / NASDAQ';
   document.getElementById('app-topbar').classList.add('visible');
-  document.getElementById('btn-save-stock').style.display =
-    (!isGuest && currentUser && !inPortfolio && portfolio.length < 10) ? 'inline-flex' : 'none';
-  document.getElementById('btn-remove-stock').style.display =
-    (currentUser && inPortfolio) ? 'inline-flex' : 'none';
-  const btn = document.getElementById('btn-brief');
-  btn.disabled = false; btn.querySelector('.content').textContent = 'AI 분석';
-  document.getElementById('brief-area').innerHTML = '';
-  const hint = document.getElementById('brief-empty-hint');
-  if (hint) hint.style.display = 'flex';
-  hideSummaryBox();
-  showView('stock');
-  renderTabs();
-  fetchPrice(currentStock.ticker, currentStock.market);
+  updateSaveRemoveButtons();
+  const btn=document.getElementById('btn-brief');
+  btn.disabled=false;btn.querySelector('.content').textContent='AI 분석';
+  document.getElementById('brief-area').innerHTML='';
+  const hint=document.getElementById('brief-empty-hint');
+  if(hint)hint.style.display='flex';
+  hideSummaryBox();showView('stock');
+  fetchPrice(currentStock.ticker,currentStock.market);
   window.scrollTo({top:0,behavior:'smooth'});
 }
-async function saveCurrentStock() {
-  if (!currentStock) return;
-  const saveBtn = document.getElementById('btn-save-stock');
-  saveBtn.textContent = '저장 중...'; saveBtn.disabled = true;
-  await addToPortfolio(currentStock);
-  saveBtn.disabled = false;
+function updateSaveRemoveButtons(){
+  if(!currentStock)return;
+  const inWl=portfolio.find(p=>p.ticker===currentStock.ticker);
+  document.getElementById('btn-save-stock').style.display=(!isGuest&&currentUser&&!inWl)?'inline-flex':'none';
+  document.getElementById('btn-remove-stock').style.display=(currentUser&&inWl)?'inline-flex':'none';
 }
-function hideTopbar() { document.getElementById('app-topbar').classList.remove('visible'); }
-function hideSummaryBox() { document.getElementById('summary-box').classList.remove('visible'); }
+function hideTopbar(){document.getElementById('app-topbar').classList.remove('visible');}
+function hideSummaryBox(){document.getElementById('summary-box').classList.remove('visible');}
 
-// ━━━ 주가 조회 (US만) ━━━
-async function fetchPrice(ticker, market) {
-  const priceEl = document.getElementById('topbar-price');
-  if (market === 'KR') { if (priceEl) priceEl.style.display = 'none'; return; }
-
-  const cached = priceCache.get(ticker);
-  if (cached && Date.now() - cached.ts < PRICE_TTL) {
-    displayPrice(cached.data);
-    return;
-  }
-  try {
-    const r = await fetch(`/api/finnhub?symbol=${encodeURIComponent(ticker)}&type=quote`, { headers: apiHeaders() });
-    if (!r.ok) return;
-    const d = await r.json();
-    if (d && d.c) {
-      const data = { current: d.c, change: d.d || 0, changePct: d.dp || 0 };
-      priceCache.set(ticker, { data, ts: Date.now() });
-      displayPrice(data);
-    }
-  } catch(e) {}
+// ━━━ 주가 (US) ━━━
+async function fetchPrice(ticker,market){
+  const priceEl=document.getElementById('topbar-price');
+  if(market==='KR'){if(priceEl)priceEl.style.display='none';return;}
+  const cached=priceCache.get(ticker);
+  if(cached&&Date.now()-cached.ts<PRICE_TTL){displayPrice(cached.data);return;}
+  try{
+    const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(ticker)}&type=quote`,{headers:apiHeaders()});
+    if(!r.ok)return;
+    const d=await r.json();
+    if(d&&d.c){const data={current:d.c,change:d.d||0,changePct:d.dp||0};priceCache.set(ticker,{data,ts:Date.now()});displayPrice(data);}
+  }catch(e){}
 }
-function displayPrice(data) {
-  const priceEl = document.getElementById('topbar-price');
-  const valEl = document.getElementById('price-val');
-  const chgEl = document.getElementById('price-chg');
-  if (!priceEl) return;
-  valEl.textContent = `$${data.current.toFixed(2)}`;
-  const isPos = data.change >= 0;
-  chgEl.textContent = `${isPos ? '+' : ''}${data.change.toFixed(2)} (${isPos ? '+' : ''}${data.changePct.toFixed(2)}%)`;
-  chgEl.className = 'price-chg fm ' + (isPos ? 'pos' : 'neg');
-  priceEl.style.display = 'flex';
+function displayPrice(data){
+  const priceEl=document.getElementById('topbar-price');
+  const valEl=document.getElementById('price-val');
+  const chgEl=document.getElementById('price-chg');
+  if(!priceEl)return;
+  valEl.textContent=`$${data.current.toFixed(2)}`;
+  const isPos=data.change>=0;
+  chgEl.textContent=`${isPos?'+':''}${data.change.toFixed(2)} (${isPos?'+':''}${data.changePct.toFixed(2)}%)`;
+  chgEl.className='price-chg fm '+(isPos?'pos':'neg');
+  priceEl.style.display='flex';
 }
 
 // ━━━ Search ━━━
-function initSearch() {
-  if (searchInited) return;
-  searchInited = true;
-
-  // topbar 검색창
-  const inp  = document.getElementById('search-input');
-  const dd   = document.getElementById('search-dd');
-  // welcome 화면 검색창
-  const winp = document.getElementById('welcome-search-input');
-  const wdd  = document.getElementById('welcome-search-dd');
-
-  inp.addEventListener('input', e => {
+function initSearch(){
+  if(searchInited)return;searchInited=true;
+  const inp=document.getElementById('search-input');
+  const dd=document.getElementById('search-dd');
+  const winp=document.getElementById('welcome-search-input');
+  const wdd=document.getElementById('welcome-search-dd');
+  inp.addEventListener('input',e=>{
     clearTimeout(searchTimer);
-    const q = e.target.value.trim();
-    if (!q) { dd.classList.remove('open'); dd.innerHTML=''; return; }
-    searchTimer = setTimeout(()=>doSearch(q, inp, dd), 260);
+    const q=e.target.value.trim();
+    if(!q){dd.classList.remove('open');dd.innerHTML='';return;}
+    searchTimer=setTimeout(()=>doSearch(q,inp,dd),260);
   });
-
-  document.addEventListener('click', e => {
-    if (!e.target.closest('.search-wrap')) { dd.classList.remove('open'); }
-    if (!e.target.closest('.welcome-search-field')) { wdd.classList.remove('open'); }
+  document.addEventListener('click',e=>{
+    if(!e.target.closest('.search-wrap'))dd.classList.remove('open');
+    if(!e.target.closest('.welcome-search-field'))wdd.classList.remove('open');
   });
-
-  if (winp) {
-    winp.addEventListener('input', e => {
+  if(winp){
+    winp.addEventListener('input',e=>{
       clearTimeout(searchTimerW);
-      const q = e.target.value.trim();
-      if (!q) { wdd.classList.remove('open'); wdd.innerHTML=''; return; }
-      searchTimerW = setTimeout(()=>doSearch(q, winp, wdd), 260);
+      const q=e.target.value.trim();
+      if(!q){wdd.classList.remove('open');wdd.innerHTML='';return;}
+      searchTimerW=setTimeout(()=>doSearch(q,winp,wdd),260);
     });
   }
 }
-async function doSearch(q, inputEl, dd) {
-  dd.innerHTML='<div class="dd-msg">검색 중...</div>'; dd.classList.add('open');
-  const results=[];
-  const qu = q.toUpperCase();
-
-  if (/[가-힣]/.test(q)) {
-    // 한국 주식
+async function doSearch(q,inputEl,dd){
+  dd.innerHTML='<div class="dd-msg">검색 중...</div>';dd.classList.add('open');
+  const results=[];const qu=q.toUpperCase();
+  if(/[가-힣]/.test(q)){
     KR_STOCKS.filter(s=>s.name.includes(q)||s.ticker.includes(q)).slice(0,8).forEach(s=>results.push(s));
-  } else {
-    // 로컬 US 종목 먼저 (즉시 표시)
-    const localUS = US_STOCKS.filter(s=>
-      s.ticker.startsWith(qu) || s.name.toUpperCase().includes(qu)
-    ).slice(0,6);
+  }else{
+    const localUS=US_STOCKS.filter(s=>s.ticker.startsWith(qu)||s.name.toUpperCase().includes(qu)).slice(0,6);
     localUS.forEach(s=>results.push(s));
-
-    // Finnhub API 병행 호출
-    try {
-      const r = await fetch(`/api/search?q=${encodeURIComponent(q)}`, { headers: apiHeaders() });
-      if (r.ok) {
-        const d = await r.json();
-        (d.result||[]).forEach(s=>{
-          if (!results.find(r=>r.ticker===s.symbol)) {
-            results.push({ticker:s.symbol, name:s.description, market:'US'});
-          }
-        });
-      }
-    } catch(e){}
-
-    // KR 알파벳 검색
-    KR_STOCKS.filter(s=>
-      s.ticker.startsWith(qu)||s.name.toUpperCase().includes(qu)
-    ).slice(0,3).forEach(s=>{
-      if(!results.find(r=>r.ticker===s.ticker)) results.push(s);
-    });
+    try{
+      const r=await fetch(`/api/search?q=${encodeURIComponent(q)}`,{headers:apiHeaders()});
+      if(r.ok){const d=await r.json();(d.result||[]).forEach(s=>{if(!results.find(r=>r.ticker===s.symbol))results.push({ticker:s.symbol,name:s.description,market:'US'});});}
+    }catch(e){}
+    KR_STOCKS.filter(s=>s.ticker.startsWith(qu)||s.name.toUpperCase().includes(qu)).slice(0,3).forEach(s=>{if(!results.find(r=>r.ticker===s.ticker))results.push(s);});
   }
-
-  if (!results.length) { dd.innerHTML='<div class="dd-msg">검색 결과 없음</div>'; return; }
+  if(!results.length){dd.innerHTML='<div class="dd-msg">검색 결과 없음</div>';return;}
   dd.innerHTML='';
   results.slice(0,8).forEach(stock=>{
-    const el=document.createElement('div'); el.className='dd-item';
+    const el=document.createElement('div');el.className='dd-item';
     el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker fm">${esc(stock.ticker)}</span><span class="dd-mkt fm">${stock.market==='KR'?'KRX':'US'}</span></div>`;
-    el.onclick=()=>{
-      if(inputEl) inputEl.value='';
-      dd.classList.remove('open'); dd.innerHTML='';
-      selectStock(stock);
-    };
+    el.onclick=()=>{if(inputEl)inputEl.value='';dd.classList.remove('open');dd.innerHTML='';selectStock(stock);};
     dd.appendChild(el);
   });
 }
-function focusSearch() {
-  // welcome 모드면 welcome 검색창 포커스
-  const wInp = document.getElementById('welcome-search-input');
-  if (wInp && document.getElementById('view-welcome').style.display !== 'none') {
-    wInp.focus(); return;
-  }
-  const el=document.getElementById('search-input'); if(!el) return;
-  el.scrollIntoView({behavior:'smooth',block:'center'});
-  setTimeout(()=>el.focus(),250);
-}
 
 // ━━━ Briefing ━━━
-async function fetchBriefing() {
-  if (!currentStock) return;
+async function fetchBriefing(){
+  if(!currentStock)return;
   const btn=document.getElementById('btn-brief');
   const area=document.getElementById('brief-area');
-
-  // 캐시 확인
-  const cacheKey = currentStock.ticker;
-  const cached = briefCache.get(cacheKey);
-  if (cached && Date.now() - cached.ts < BRIEF_TTL) {
-    renderBriefing(cached.analyses, cached.ts);
-    renderSummaryBox(cached.analyses);
-    btn.querySelector('.content').textContent = '새로고침';
-    return;
-  }
-
-  btn.disabled=true; btn.querySelector('.content').textContent='분석 중...';
-  hideSummaryBox();
-
-  const setStatus=msg=>{
-    area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><div class="loader"></div><div class="loader-label fm">${msg}</div></div>`;
-  };
-
-  try {
+  const cacheKey=currentStock.ticker;
+  const cached=briefCache.get(cacheKey);
+  if(cached&&Date.now()-cached.ts<BRIEF_TTL){renderBriefing(cached.analyses,cached.ts);renderSummaryBox(cached.analyses);btn.querySelector('.content').textContent='새로고침';return;}
+  btn.disabled=true;btn.querySelector('.content').textContent='분석 중...';hideSummaryBox();
+  const setStatus=msg=>{area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><div class="loader"></div><div class="loader-label fm">${msg}</div></div>`;};
+  try{
     let articles=[];
-    if (currentStock.market==='KR') {
+    if(currentStock.market==='KR'){
       setStatus('뉴스 수집 중...');
-      const r=await fetch(`/api/naver?query=${encodeURIComponent(currentStock.name)}`, { headers: apiHeaders() });
-      if (!r.ok) throw new Error(`뉴스 조회 실패 (${r.status})`);
+      const r=await fetch(`/api/naver?query=${encodeURIComponent(currentStock.name)}`,{headers:apiHeaders()});
+      if(!r.ok)throw new Error(`뉴스 조회 실패 (${r.status})`);
       const d=await r.json();
       articles=(d.items||[]).map(a=>({title:a.title,description:a.description,url:a.originallink||a.link}));
-    } else {
+    }else{
       setStatus('뉴스 수집 중...');
-      const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(currentStock.ticker)}`, { headers: apiHeaders() });
-      if (!r.ok) throw new Error(`뉴스 조회 실패 (${r.status})`);
+      const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(currentStock.ticker)}`,{headers:apiHeaders()});
+      if(!r.ok)throw new Error(`뉴스 조회 실패 (${r.status})`);
       const d=await r.json();
       articles=(Array.isArray(d)?d:[]).map(a=>({title:a.headline,description:a.summary,url:a.url}));
     }
-
-    if (!articles.length) {
-      area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">최근 뉴스가 없습니다</p></div>`;
-      btn.querySelector('.content').textContent='다시 시도'; return;
-    }
-
+    if(!articles.length){area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">최근 뉴스가 없습니다</p></div>`;btn.querySelector('.content').textContent='다시 시도';return;}
     setStatus(`${articles.length}개 기사 분석 중...`);
-
-    const gr=await fetch('/api/groq',{method:'POST',headers: apiHeaders({'Content-Type':'application/json'}),
-      body:JSON.stringify({ticker:currentStock.ticker,name:currentStock.name,articles,market:currentStock.market})});
+    const gr=await fetch('/api/groq',{method:'POST',headers:apiHeaders({'Content-Type':'application/json'}),body:JSON.stringify({ticker:currentStock.ticker,name:currentStock.name,articles,market:currentStock.market})});
     const gd=await gr.json().catch(()=>({}));
-    if (!gr.ok) throw new Error(gd.error || `AI 분석 실패 (${gr.status})`);
+    if(!gr.ok)throw new Error(gd.error||`AI 분석 실패 (${gr.status})`);
     const analyses=gd.analyses||[];
-
-    if (!analyses.length) {
-      const errMsg = gd.error ? `분석 실패: ${gd.error}` : '관련 뉴스를 찾지 못했습니다.';
+    if(!analyses.length){
+      const errMsg=gd.error?`분석 실패: ${gd.error}`:'관련 뉴스를 찾지 못했습니다.';
       area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted);">${esc(errMsg)}</p></div>`;
-      btn.querySelector('.content').textContent='다시 시도'; return;
+      btn.querySelector('.content').textContent='다시 시도';return;
     }
-
-    // 캐시 저장
-    const now = Date.now();
-    briefCache.set(cacheKey, { analyses, ts: now });
-    renderPortfolioSummary();
-
-    if (currentUser && sb) {
-      sb.from('news_history').insert(analyses.map(a=>({
-        user_id:currentUser.id,ticker:currentStock.ticker,
-        title:a.title,summary:a.summary,sentiment:a.sentiment,
-        impact_short:a.impact_short,impact_long:a.impact_long,url:a.url
-      }))).then(({error})=>{if(error)console.warn('History:',error);});
-    }
-
-    renderBriefing(analyses, now);
-    renderSummaryBox(analyses);
+    const now=Date.now();
+    briefCache.set(cacheKey,{analyses,ts:now});
+    renderWatchlistSummary();renderWatchlistPanel();
+    renderBriefing(analyses,now);renderSummaryBox(analyses);
     btn.querySelector('.content').textContent='새로고침';
-
-  } catch(e) {
+  }catch(e){
     area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;color:var(--muted);">오류: ${esc(e.message)}</p></div>`;
     btn.querySelector('.content').textContent='다시 시도';
-  } finally { btn.disabled=false; }
+  }finally{btn.disabled=false;}
 }
 
-// ━━━ Render Summary ━━━
-function renderSummaryBox(list) {
-  const box = document.getElementById('summary-box');
-  const pillsEl = document.getElementById('summary-pills');
-  const verdictEl = document.getElementById('summary-verdict');
-
-  const counts = { '호재':0, '악재':0, '중립':0 };
-  list.forEach(a => {
-    const s = a.sentiment;
-    if (s === '호재' || s === 'Bullish') counts['호재']++;
-    else if (s === '악재' || s === 'Bearish') counts['악재']++;
+// ━━━ Summary Box ━━━
+function renderSummaryBox(list){
+  const box=document.getElementById('summary-box');
+  const pillsEl=document.getElementById('summary-pills');
+  const verdictEl=document.getElementById('summary-verdict');
+  const counts={'호재':0,'악재':0,'중립':0};
+  list.forEach(a=>{
+    if(a.sentiment==='호재'||a.sentiment==='Bullish')counts['호재']++;
+    else if(a.sentiment==='악재'||a.sentiment==='Bearish')counts['악재']++;
     else counts['중립']++;
   });
-
-  const clsMap = { '호재':'pos', '악재':'neg', '중립':'neu' };
-  const iconMap = { '호재':'↑', '악재':'↓', '중립':'—' };
-  pillsEl.innerHTML = Object.entries(counts)
-    .filter(([,v])=>v>0)
-    .map(([k,v])=>`<span class="summary-pill ${clsMap[k]} fm">${iconMap[k]} ${k} ${v}</span>`)
-    .join('');
-
-  const total = list.length;
-  const pos = counts['호재'], neg = counts['악재'];
-  let verdict = '';
-  if (pos > neg && pos >= total/2) verdict = `총 ${total}개 중 ${pos}개가 호재 — 전반적으로 긍정적인 흐름입니다.`;
-  else if (neg > pos && neg >= total/2) verdict = `총 ${total}개 중 ${neg}개가 악재 — 단기 주의가 필요합니다.`;
-  else verdict = `호재 ${pos}개 vs 악재 ${neg}개 — 혼조세입니다.`;
-  verdictEl.textContent = verdict;
+  const clsMap={'호재':'pos','악재':'neg','중립':'neu'};
+  const iconMap={'호재':'↑','악재':'↓','중립':'—'};
+  pillsEl.innerHTML=Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>`<span class="summary-pill ${clsMap[k]} fm">${iconMap[k]} ${k} ${v}</span>`).join('');
+  const total=list.length,pos=counts['호재'],neg=counts['악재'];
+  let verdict='';
+  if(pos>neg&&pos>=total/2)verdict=`총 ${total}개 중 ${pos}개가 호재 — 전반적으로 긍정적인 흐름입니다.`;
+  else if(neg>pos&&neg>=total/2)verdict=`총 ${total}개 중 ${neg}개가 악재 — 단기 주의가 필요합니다.`;
+  else verdict=`호재 ${pos}개 vs 악재 ${neg}개 — 혼조세입니다.`;
+  verdictEl.textContent=verdict;
   box.classList.add('visible');
 }
 
-// ━━━ Render Cards ━━━
-function renderBriefing(list, cacheTs) {
-  const hint = document.getElementById('brief-empty-hint');
-  if (hint) hint.style.display = 'none';
-  const area = document.getElementById('brief-area');
-  const ts = new Date(cacheTs || Date.now()).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
-  const isCached = cacheTs && (Date.now() - cacheTs) > 5000;
-  const clsMap = {'호재':'up','악재':'down','중립':'flat',Bullish:'up',Bearish:'down',Neutral:'flat'};
-  const iconMap = {'호재':'↑','악재':'↓','중립':'—',Bullish:'↑',Bearish:'↓',Neutral:'—'};
-
-  let html = `
-  <div class="brief-header">
-    <div class="brief-meta fm"><div class="brief-dot"></div>분석 브리핑 · ${ts}${isCached ? ' <span class="cache-notice">(캐시됨)</span>' : ''}</div>
-    <div class="brief-count fm">${list.length}개 기사 분석</div>
-  </div>
-  <div class="cards-grid">`;
-  list.forEach((item, i) => {
-    const cls = clsMap[item.sentiment] || 'flat';
-    const icon = iconMap[item.sentiment] || '—';
-    const verdict = extractVerdict(item.summary || item.one_line || '');
-
-    html += `
-    <div class="news-card ${cls}" id="card-${i}">
-      <div class="card-head" onclick="toggleCard(${i})">
-        <div class="card-top-row">
-          <span class="card-title">${esc(item.title)}</span>
-          <span class="card-toggle fm" id="toggle-${i}">상세 ↓</span>
-        </div>
-        <div class="card-verdict-row">
-          <span class="sentiment-badge ${cls} fm">${icon} ${esc(item.sentiment)}</span>
-          <span class="card-verdict">${esc(verdict)}</span>
-        </div>
-      </div>
-      <div class="card-detail" id="detail-${i}">
-        <div class="card-summary-text">${esc(item.summary)}</div>
-        <div class="impact-row">
-          <div class="impact">
-            <div class="impact-lbl fm">단기 · 1-4주</div>
-            <div class="impact-val">${esc(item.impact_short)}</div>
-          </div>
-          <div class="impact">
-            <div class="impact-lbl fm">장기 · 3개월+</div>
-            <div class="impact-val">${esc(item.impact_long)}</div>
-          </div>
-        </div>
-        ${safeUrl(item.url) ? `<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">원문 보기 →</a></div>` : ''}
-      </div>
-    </div>`;
+// ━━━ Cards ━━━
+function renderBriefing(list,cacheTs){
+  const hint=document.getElementById('brief-empty-hint');
+  if(hint)hint.style.display='none';
+  const area=document.getElementById('brief-area');
+  const ts=new Date(cacheTs||Date.now()).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  const isCached=cacheTs&&(Date.now()-cacheTs)>5000;
+  const clsMap={'호재':'up','악재':'down','중립':'flat',Bullish:'up',Bearish:'down',Neutral:'flat'};
+  const iconMap={'호재':'↑','악재':'↓','중립':'—',Bullish:'↑',Bearish:'↓',Neutral:'—'};
+  let html=`<div class="brief-header"><div class="brief-meta fm"><div class="brief-dot"></div>분석 브리핑 · ${ts}${isCached?` <span class="cache-notice">(캐시됨)</span>`:''}</div><div class="brief-count fm">${list.length}개 기사 분석</div></div><div class="cards-grid">`;
+  list.forEach((item,i)=>{
+    const cls=clsMap[item.sentiment]||'flat';
+    const icon=iconMap[item.sentiment]||'—';
+    const verdict=extractVerdict(item.summary||item.one_line||'');
+    html+=`<div class="news-card ${cls}" id="card-${i}"><div class="card-head" onclick="toggleCard(${i})"><div class="card-top-row"><span class="card-title">${esc(item.title)}</span><span class="card-toggle fm" id="toggle-${i}">상세 ↓</span></div><div class="card-verdict-row"><span class="sentiment-badge ${cls} fm">${icon} ${esc(item.sentiment)}</span><span class="card-verdict">${esc(verdict)}</span></div></div><div class="card-detail" id="detail-${i}"><div class="card-summary-text">${esc(item.summary)}</div><div class="impact-row"><div class="impact"><div class="impact-lbl fm">단기 · 1-4주</div><div class="impact-val">${esc(item.impact_short)}</div></div><div class="impact"><div class="impact-lbl fm">장기 · 3개월+</div><div class="impact-val">${esc(item.impact_long)}</div></div></div>${safeUrl(item.url)?`<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">원문 보기 →</a></div>`:''}</div></div>`;
   });
-
-  html += '</div>';
-  area.innerHTML = html;
-
-  gsap.fromTo(area.querySelectorAll('.news-card'),
-    {opacity:0, y:18}, {opacity:1, y:0, duration:.45, stagger:.07, ease:'power3.out'}
-  );
+  html+='</div>';
+  area.innerHTML=html;
+  gsap.fromTo(area.querySelectorAll('.news-card'),{opacity:0,y:18},{opacity:1,y:0,duration:.45,stagger:.07,ease:'power3.out'});
+}
+function extractVerdict(text){
+  if(!text)return'';
+  const match=text.match(/^([^.!?]{10,90}[.!?])/);
+  if(match)return match[1];
+  return text.length>90?text.slice(0,88)+'…':text;
+}
+function toggleCard(i){
+  const detail=document.getElementById(`detail-${i}`);
+  const toggle=document.getElementById(`toggle-${i}`);
+  const isOpen=detail.classList.contains('open');
+  detail.classList.toggle('open',!isOpen);
+  toggle.textContent=isOpen?'상세 ↓':'접기 ↑';
 }
 
-function extractVerdict(text) {
-  if (!text) return '';
-  const match = text.match(/^([^.!?]{10,90}[.!?])/);
-  if (match) return match[1];
-  return text.length > 90 ? text.slice(0, 88) + '…' : text;
-}
-
-function toggleCard(i) {
-  const detail = document.getElementById(`detail-${i}`);
-  const toggle = document.getElementById(`toggle-${i}`);
-  const isOpen = detail.classList.contains('open');
-  detail.classList.toggle('open', !isOpen);
-  toggle.textContent = isOpen ? '상세 ↓' : '접기 ↑';
-}
-
-// ━━━ 포트폴리오 요약 ━━━
-function renderPortfolioSummary() {
-  const el = document.getElementById('portfolio-summary');
-  const grid = document.getElementById('portfolio-summary-grid');
-  const sublabel = document.getElementById('ps-sublabel');
-  if (!el || !grid) return;
-  if (isGuest || portfolio.length === 0) { el.style.display = 'none'; return; }
-
-  el.style.display = 'block';
-  const analyzed = portfolio.filter(s => briefCache.has(s.ticker)).length;
-  if (sublabel) sublabel.textContent = analyzed > 0 ? `${analyzed}/${portfolio.length}개 분석됨` : '';
-
-  grid.innerHTML = '';
-  portfolio.forEach(s => {
-    const cached = briefCache.get(s.ticker);
-    const item = document.createElement('div');
-    item.className = 'ps-item';
-    item.onclick = () => selectStock(s);
-
-    let badgeHtml = '<span class="ps-unanalyzed">미분석</span>';
-    if (cached) {
-      const counts = { '호재': 0, '악재': 0, '중립': 0 };
-      cached.analyses.forEach(a => {
-        if (a.sentiment === '호재' || a.sentiment === 'Bullish') counts['호재']++;
-        else if (a.sentiment === '악재' || a.sentiment === 'Bearish') counts['악재']++;
-        else counts['중립']++;
-      });
-      const top = Object.entries(counts).sort((a,b) => b[1]-a[1])[0];
-      const cls = { '호재':'pos', '악재':'neg', '중립':'neu' }[top[0]];
-      badgeHtml = `<span class="ps-badge ${cls} fm">${top[0]}</span>`;
-    }
-
-    item.innerHTML = `
-      <div class="ps-ticker fd">${esc(s.market==='KR' ? s.name : s.ticker)}</div>
-      <div class="ps-name fm">${esc(s.market==='KR' ? s.ticker : s.name)}</div>
-      ${badgeHtml}`;
-    grid.appendChild(item);
+// ━━━ 관심종목 요약 (홈) ━━━
+function renderWatchlistSummary(){
+  const el=document.getElementById('watchlist-summary');
+  const content=document.getElementById('wl-summary-content');
+  const sublabel=document.getElementById('ps-sublabel');
+  if(!el||!content)return;
+  if(isGuest||portfolio.length===0){el.style.display='none';return;}
+  el.style.display='block';
+  const analyzed=portfolio.filter(s=>briefCache.has(s.ticker)).length;
+  if(sublabel)sublabel.textContent=analyzed>0?`${analyzed}/${portfolio.length}개 분석됨`:'';
+  content.innerHTML='';
+  const grouped={};const ungrouped=[];
+  groups.forEach(g=>{grouped[g.id]=[];});
+  portfolio.forEach(s=>{
+    if(s.group_id&&grouped[s.group_id]!==undefined)grouped[s.group_id].push(s);
+    else ungrouped.push(s);
   });
-}
-
-function goHome() {
-  currentStock = null;
-  hideSummaryBox();
-  hideTopbar();
-  renderTabs();
-  showView('welcome');
-  // 검색창 초기화
-  const si = document.getElementById('search-input');
-  const wi = document.getElementById('welcome-search-input');
-  const sd = document.getElementById('search-dd');
-  const wd = document.getElementById('welcome-search-dd');
-  if (si) si.value = '';
-  if (wi) wi.value = '';
-  if (sd) { sd.innerHTML=''; sd.classList.remove('open'); }
-  if (wd) { wd.innerHTML=''; wd.classList.remove('open'); }
-  window.scrollTo({top:0, behavior:'smooth'});
-}
-
-function showView(name) {
-  document.getElementById('view-welcome').style.display = name==='welcome' ? 'block' : 'none';
-  document.getElementById('view-stock').style.display   = name==='stock'   ? 'block' : 'none';
-  if (name !== 'stock') {
-    document.getElementById('app-topbar').classList.remove('visible');
+  groups.forEach(g=>{
+    const stocks=grouped[g.id]||[];
+    if(stocks.length===0)return;
+    const labelEl=document.createElement('div');
+    labelEl.className='wl-sum-group-label fm';
+    labelEl.textContent=g.name;
+    content.appendChild(labelEl);
+    const grid=document.createElement('div');
+    grid.className='portfolio-summary-grid';
+    stocks.forEach(s=>grid.appendChild(createPsItem(s)));
+    content.appendChild(grid);
+  });
+  if(ungrouped.length>0){
+    if(groups.length>0){const lbl=document.createElement('div');lbl.className='wl-sum-group-label fm';lbl.style.color='var(--muted)';lbl.textContent='기타';content.appendChild(lbl);}
+    const grid=document.createElement('div');grid.className='portfolio-summary-grid';
+    ungrouped.forEach(s=>grid.appendChild(createPsItem(s)));
+    content.appendChild(grid);
   }
 }
-function esc(s) {
-  if (!s) return '';
-  return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+function createPsItem(s){
+  const cached=briefCache.get(s.ticker);
+  const item=document.createElement('div');item.className='ps-item';item.onclick=()=>selectStock(s);
+  let badgeHtml='<span class="ps-unanalyzed">미분석</span>';
+  if(cached){
+    const counts={'호재':0,'악재':0,'중립':0};
+    cached.analyses.forEach(a=>{if(a.sentiment==='호재'||a.sentiment==='Bullish')counts['호재']++;else if(a.sentiment==='악재'||a.sentiment==='Bearish')counts['악재']++;else counts['중립']++;});
+    const top=Object.entries(counts).sort((a,b)=>b[1]-a[1])[0];
+    const cls={'호재':'pos','악재':'neg','중립':'neu'}[top[0]];
+    badgeHtml=`<span class="ps-badge ${cls} fm">${top[0]}</span>`;
+  }
+  item.innerHTML=`<div class="ps-ticker fd">${esc(s.market==='KR'?s.name:s.ticker)}</div><div class="ps-name fm">${esc(s.market==='KR'?s.ticker:s.name)}</div>${badgeHtml}`;
+  return item;
 }
-function safeUrl(url) {
-  if (!url) return '';
-  try {
-    const u = new URL(url);
-    return (u.protocol === 'http:' || u.protocol === 'https:') ? url : '';
-  } catch { return ''; }
+
+function goHome(){
+  currentStock=null;hideSummaryBox();hideTopbar();closeGroupSelectPopup();showView('welcome');
+  const si=document.getElementById('search-input'),wi=document.getElementById('welcome-search-input');
+  const sd=document.getElementById('search-dd'),wd=document.getElementById('welcome-search-dd');
+  if(si)si.value='';if(wi)wi.value='';
+  if(sd){sd.innerHTML='';sd.classList.remove('open');}
+  if(wd){wd.innerHTML='';wd.classList.remove('open');}
+  window.scrollTo({top:0,behavior:'smooth'});
 }
+function showView(name){
+  document.getElementById('view-welcome').style.display=name==='welcome'?'block':'none';
+  document.getElementById('view-stock').style.display=name==='stock'?'block':'none';
+  if(name!=='stock')document.getElementById('app-topbar').classList.remove('visible');
+}
+
+// ━━━ Utils ━━━
+function showToast(msg,duration=2500){
+  const t=document.createElement('div');t.className='toast';t.textContent=msg;
+  document.body.appendChild(t);
+  requestAnimationFrame(()=>requestAnimationFrame(()=>t.classList.add('show')));
+  setTimeout(()=>{t.classList.remove('show');setTimeout(()=>t.remove(),300);},duration);
+}
+function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
+function safeUrl(url){if(!url)return'';try{const u=new URL(url);return(u.protocol==='http:'||u.protocol==='https:')?url:'';}catch{return'';}}
 
 initApp();
 </script>
