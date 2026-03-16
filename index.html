@@ -266,6 +266,15 @@ body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-se
 .ps-badge.neu{background:rgba(201,169,98,.18);color:#E0C070;border:1px solid rgba(201,169,98,.4)}
 .ps-unanalyzed{font-family:'IBM Plex Mono',monospace;font-size:.7rem;color:rgba(232,228,220,.18)}
 .cache-notice{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:rgba(201,169,98,.5);letter-spacing:.04em}
+.force-refresh-btn{background:none;border:1px solid rgba(196,154,56,.2);border-radius:9999px;padding:.2rem .65rem;color:rgba(196,154,56,.55);font-family:'IBM Plex Mono',monospace;font-size:.7rem;cursor:pointer;transition:all .15s;margin-left:.4rem;vertical-align:middle}
+.force-refresh-btn:hover{border-color:rgba(196,154,56,.5);color:var(--gold)}
+.filter-tabs{display:flex;gap:.5rem;margin-bottom:1.5rem;flex-wrap:wrap}
+.filter-tab{padding:.4rem 1rem;background:transparent;border:1px solid var(--border);border-radius:9999px;font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--muted);cursor:pointer;transition:all .15s;letter-spacing:.04em}
+.filter-tab:hover{border-color:var(--border-gold);color:var(--text)}
+.filter-tab.active{background:rgba(196,154,56,.1);border-color:rgba(196,154,56,.4);color:var(--gold)}
+.filter-tab[data-f="up"].active{background:rgba(76,175,125,.12);border-color:rgba(76,175,125,.45);color:#5CE89A}
+.filter-tab[data-f="down"].active{background:rgba(217,95,95,.12);border-color:rgba(217,95,95,.45);color:#FF6B6B}
+.filter-cnt{opacity:.65;margin-left:.3rem}
 
 /* 관심종목 패널 */
 .wl-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .3s}
@@ -610,7 +619,7 @@ body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-se
 let sb=null,currentUser=null,isGuest=false;
 let portfolio=[],groups=[],currentStock=null;
 let searchTimer=null,searchTimerW=null,appEntered=false,searchInited=false;
-let apiSecret='';
+let apiSecret='',briefFetching=false,currentFilter='all';
 const briefCache=new Map(),priceCache=new Map();
 const BRIEF_TTL=60*60*1000,PRICE_TTL=5*60*1000;
 
@@ -755,6 +764,7 @@ async function createGroup(name){
 }
 async function deleteGroup(id){
   if(!currentUser||!sb)return;
+  await sb.from('portfolios').update({group_id:null}).eq('group_id',id).eq('user_id',currentUser.id);
   const{error}=await sb.from('watchlist_groups').delete().eq('id',id);
   if(!error){
     groups=groups.filter(g=>g.id!==id);
@@ -836,7 +846,7 @@ async function loadPortfolio(){
   if(!error&&data)portfolio=data;
 }
 async function addToWatchlist(stock,groupId){
-  if(isGuest){goToAuth();return;}
+  if(isGuest){showToast('로그인 후 관심종목을 저장할 수 있습니다');setTimeout(()=>goToAuth(),1200);return;}
   if(portfolio.length>=20){showToast('최대 20개까지 저장할 수 있습니다');return;}
   if(portfolio.find(p=>p.ticker===stock.ticker)){showToast('이미 관심종목에 있습니다');return;}
   try{
@@ -914,6 +924,7 @@ function onOutsideGspClick(e){
 // ━━━ Stock selection ━━━
 function selectStockById(id){const s=portfolio.find(p=>p.id===id);if(s)selectStock(s);}
 function selectStock(stock){
+  currentFilter='all';
   const inWl=portfolio.find(p=>p.ticker===stock.ticker);
   currentStock=inWl||stock;
   document.getElementById('disp-ticker').textContent=currentStock.market==='KR'?currentStock.name:currentStock.ticker;
@@ -942,7 +953,15 @@ function hideSummaryBox(){document.getElementById('summary-box').classList.remov
 // ━━━ 주가 (US) ━━━
 async function fetchPrice(ticker,market){
   const priceEl=document.getElementById('topbar-price');
-  if(market==='KR'){if(priceEl)priceEl.style.display='none';return;}
+  if(market==='KR'){
+    if(priceEl){
+      document.getElementById('price-val').textContent='KRX';
+      const chEl=document.getElementById('price-chg');
+      chEl.textContent='실시간 주가 미지원';chEl.className='price-chg fm';chEl.style.color='rgba(240,237,230,.2)';
+      priceEl.style.display='flex';
+    }
+    return;
+  }
   const cached=priceCache.get(ticker);
   if(cached&&Date.now()-cached.ts<PRICE_TTL){displayPrice(cached.data);return;}
   try{
@@ -1015,13 +1034,16 @@ async function doSearch(q,inputEl,dd){
 }
 
 // ━━━ Briefing ━━━
-async function fetchBriefing(){
-  if(!currentStock)return;
+async function fetchBriefing(force=false){
+  if(!currentStock||briefFetching)return;
+  briefFetching=true;
   const btn=document.getElementById('btn-brief');
   const area=document.getElementById('brief-area');
   const cacheKey=currentStock.ticker;
-  const cached=briefCache.get(cacheKey);
-  if(cached&&Date.now()-cached.ts<BRIEF_TTL){renderBriefing(cached.analyses,cached.ts);renderSummaryBox(cached.analyses);btn.querySelector('.content').textContent='새로고침';return;}
+  if(!force){
+    const cached=briefCache.get(cacheKey);
+    if(cached&&Date.now()-cached.ts<BRIEF_TTL){renderBriefing(cached.analyses,cached.ts);renderSummaryBox(cached.analyses);btn.querySelector('.content').textContent='새로고침';briefFetching=false;return;}
+  }else{briefCache.delete(cacheKey);}
   btn.disabled=true;btn.querySelector('.content').textContent='분석 중...';hideSummaryBox();
   const setStatus=msg=>{area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><div class="loader"></div><div class="loader-label fm">${msg}</div></div>`;};
   try{
@@ -1058,7 +1080,7 @@ async function fetchBriefing(){
   }catch(e){
     area.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><p class="fd" style="font-style:italic;color:var(--muted);">오류: ${esc(e.message)}</p></div>`;
     btn.querySelector('.content').textContent='다시 시도';
-  }finally{btn.disabled=false;}
+  }finally{btn.disabled=false;briefFetching=false;}
 }
 
 // ━━━ Summary Box ━━━
@@ -1093,16 +1115,29 @@ function renderBriefing(list,cacheTs){
   const isCached=cacheTs&&(Date.now()-cacheTs)>5000;
   const clsMap={'호재':'up','악재':'down','중립':'flat',Bullish:'up',Bearish:'down',Neutral:'flat'};
   const iconMap={'호재':'↑','악재':'↓','중립':'—',Bullish:'↑',Bearish:'↓',Neutral:'—'};
-  let html=`<div class="brief-header"><div class="brief-meta fm"><div class="brief-dot"></div>분석 브리핑 · ${ts}${isCached?` <span class="cache-notice">(캐시됨)</span>`:''}</div><div class="brief-count fm">${list.length}개 기사 분석</div></div><div class="cards-grid">`;
+  const cnt={up:0,down:0,flat:0};
+  list.forEach(item=>{cnt[clsMap[item.sentiment]||'flat']++;});
+  const ftabs=['all','up','down','flat'].map(f=>{
+    const label={all:'전체',up:'호재',down:'악재',flat:'중립'}[f];
+    const n=f==='all'?list.length:cnt[f];
+    return `<button class="filter-tab${currentFilter===f?' active':''}" data-f="${f}" onclick="setFilter('${f}')">${label} <span class="filter-cnt">${n}</span></button>`;
+  }).join('');
+  let html=`<div class="brief-header"><div class="brief-meta fm"><div class="brief-dot"></div>분석 브리핑 · ${ts}${isCached?` <span class="cache-notice">(캐시됨)</span> <button class="force-refresh-btn fm" onclick="fetchBriefing(true)">새로 분석</button>`:''}</div><div class="brief-count fm">${list.length}개 기사 분석</div></div><div class="filter-tabs">${ftabs}</div><div class="cards-grid">`;
   list.forEach((item,i)=>{
     const cls=clsMap[item.sentiment]||'flat';
     const icon=iconMap[item.sentiment]||'—';
     const verdict=extractVerdict(item.summary||item.one_line||'');
-    html+=`<div class="news-card ${cls}" id="card-${i}"><div class="card-head" onclick="toggleCard(${i})"><div class="card-top-row"><span class="card-title">${esc(item.title)}</span><span class="card-toggle fm" id="toggle-${i}">상세 ↓</span></div><div class="card-verdict-row"><span class="sentiment-badge ${cls} fm">${icon} ${esc(item.sentiment)}</span><span class="card-verdict">${esc(verdict)}</span></div></div><div class="card-detail" id="detail-${i}"><div class="card-summary-text">${esc(item.summary)}</div><div class="impact-row"><div class="impact"><div class="impact-lbl fm">단기 · 1-4주</div><div class="impact-val">${esc(item.impact_short)}</div></div><div class="impact"><div class="impact-lbl fm">장기 · 3개월+</div><div class="impact-val">${esc(item.impact_long)}</div></div></div>${safeUrl(item.url)?`<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">원문 보기 →</a></div>`:''}</div></div>`;
+    const hidden=currentFilter!=='all'&&currentFilter!==cls;
+    html+=`<div class="news-card ${cls}" id="card-${i}" data-s="${cls}"${hidden?' style="display:none"':''}><div class="card-head" onclick="toggleCard(${i})"><div class="card-top-row"><span class="card-title">${esc(item.title)}</span><span class="card-toggle fm" id="toggle-${i}">상세 ↓</span></div><div class="card-verdict-row"><span class="sentiment-badge ${cls} fm">${icon} ${esc(item.sentiment)}</span><span class="card-verdict">${esc(verdict)}</span></div></div><div class="card-detail" id="detail-${i}"><div class="card-summary-text">${esc(item.summary)}</div><div class="impact-row"><div class="impact"><div class="impact-lbl fm">단기 · 1-4주</div><div class="impact-val">${esc(item.impact_short)}</div></div><div class="impact"><div class="impact-lbl fm">장기 · 3개월+</div><div class="impact-val">${esc(item.impact_long)}</div></div></div>${safeUrl(item.url)?`<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">원문 보기 →</a></div>`:''}</div></div>`;
   });
   html+='</div>';
   area.innerHTML=html;
   gsap.fromTo(area.querySelectorAll('.news-card'),{opacity:0,y:18},{opacity:1,y:0,duration:.45,stagger:.07,ease:'power3.out'});
+}
+function setFilter(f){
+  currentFilter=f;
+  document.querySelectorAll('.filter-tab').forEach(t=>t.classList.toggle('active',t.dataset.f===f));
+  document.querySelectorAll('.news-card').forEach(c=>{c.style.display=(f==='all'||c.dataset.s===f)?'':'none';});
 }
 function extractVerdict(text){
   if(!text)return'';
