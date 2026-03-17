@@ -859,7 +859,7 @@ function renderWatchlistPanel(){
   if(countEl)countEl.textContent=portfolio.length>0?`· ${portfolio.length}개`:'';
   if(meta)meta.textContent=`${portfolio.length} / 20개`;
   if(!currentUser){body.innerHTML='<div class="wl-empty-msg">로그인 후 관심종목을<br>저장할 수 있습니다</div>';return;}
-  if(portfolio.length===0){body.innerHTML='<div class="wl-empty-msg">관심종목이 없습니다<br>종목 검색 후 추가하세요</div>';return;}
+  if(portfolio.length===0&&groups.length===0){body.innerHTML='<div class="wl-empty-msg">관심종목이 없습니다<br>종목 검색 후 추가하세요</div>';return;}
   const grouped={};const ungrouped=[];
   groups.forEach(g=>{grouped[g.id]=[];});
   portfolio.forEach(s=>{
