@@ -1017,30 +1017,22 @@ function hideTopbar(){document.getElementById('app-topbar').classList.remove('vi
 function hideSummaryBox(){document.getElementById('summary-box').classList.remove('visible');}
 
 function refreshPrice(){
-  if(!currentStock||currentStock.market==='KR')return;
+  if(!currentStock)return;
   priceCache.delete(currentStock.ticker);
   fetchPrice(currentStock.ticker,currentStock.market);
 }
 
-// ━━━ 주가 (US) ━━━
+// ━━━ 주가 (KR + US) ━━━
 async function fetchPrice(ticker,market){
   const priceEl=document.getElementById('topbar-price');
-  if(market==='KR'){
-    if(priceEl){
-      document.getElementById('price-val').textContent='KRX';
-      const chEl=document.getElementById('price-chg');
-      chEl.textContent='실시간 주가 미지원';chEl.className='price-chg fm';chEl.style.color='rgba(240,237,230,.2)';
-      priceEl.style.display='flex';
-    }
-    return;
-  }
+  if(!priceEl)return;
   const cached=priceCache.get(ticker);
   if(cached&&Date.now()-cached.ts<PRICE_TTL){displayPrice(cached.data);return;}
   try{
-    const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(ticker)}&type=quote`,{headers:apiHeaders()});
+    const r=await fetch(`/api/price?symbol=${encodeURIComponent(ticker)}&market=${encodeURIComponent(market)}`,{headers:apiHeaders()});
     if(!r.ok)return;
     const d=await r.json();
-    if(d&&d.c){const data={current:d.c,change:d.d||0,changePct:d.dp||0};priceCache.set(ticker,{data,ts:Date.now()});displayPrice(data);}
+    if(d&&d.current){const data={current:d.current,change:d.change||0,changePct:d.changePct||0,currency:d.currency||'USD'};priceCache.set(ticker,{data,ts:Date.now()});displayPrice(data);}
   }catch(e){}
 }
 function displayPrice(data){
@@ -1048,9 +1040,12 @@ function displayPrice(data){
   const valEl=document.getElementById('price-val');
   const chgEl=document.getElementById('price-chg');
   if(!priceEl)return;
-  valEl.textContent=`$${data.current.toFixed(2)}`;
+  const isKRW=data.currency==='KRW';
+  valEl.textContent=isKRW?`₩${Math.round(data.current).toLocaleString()}`:`$${data.current.toFixed(2)}`;
   const isPos=data.change>=0;
-  chgEl.textContent=`${isPos?'+':''}${data.change.toFixed(2)} (${isPos?'+':''}${data.changePct.toFixed(2)}%)`;
+  chgEl.textContent=isKRW
+    ?`${isPos?'+':''}${Math.round(data.change).toLocaleString()}원 (${isPos?'+':''}${data.changePct.toFixed(2)}%)`
+    :`${isPos?'+':''}${data.change.toFixed(2)} (${isPos?'+':''}${data.changePct.toFixed(2)}%)`;
   chgEl.style.color='';
   chgEl.className='price-chg fm '+(isPos?'pos':'neg');
   priceEl.style.display='flex';
