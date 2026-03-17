@@ -275,6 +275,12 @@ body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-se
 .filter-tab[data-f="up"].active{background:rgba(76,175,125,.12);border-color:rgba(76,175,125,.45);color:#5CE89A}
 .filter-tab[data-f="down"].active{background:rgba(217,95,95,.12);border-color:rgba(217,95,95,.45);color:#FF6B6B}
 .filter-cnt{opacity:.65;margin-left:.3rem}
+.dd-item.selected{background:rgba(201,169,98,.06)}
+.dd-add-btn{background:none;border:1px solid rgba(196,154,56,.25);border-radius:.4rem;color:rgba(196,154,56,.6);font-family:'IBM Plex Mono',monospace;font-size:.75rem;cursor:pointer;padding:.2rem .55rem;transition:all .15s;line-height:1;flex-shrink:0}
+.dd-add-btn:hover{border-color:rgba(196,154,56,.6);color:var(--gold);background:rgba(196,154,56,.06)}
+.dd-add-btn.in-wl{color:var(--positive);border-color:rgba(76,175,125,.4);cursor:default}
+.price-refresh-btn{background:none;border:none;color:rgba(240,237,230,.2);cursor:pointer;font-size:.85rem;padding:.1rem .25rem;transition:color .15s;line-height:1}
+.price-refresh-btn:hover{color:rgba(240,237,230,.6)}
 
 /* 관심종목 패널 */
 .wl-overlay{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:500;opacity:0;pointer-events:none;transition:opacity .3s}
@@ -551,7 +557,10 @@ body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-se
           </div>
         </div>
         <div class="topbar-price" id="topbar-price">
-          <span class="price-val fm" id="price-val">—</span>
+          <div style="display:flex;align-items:center;gap:.4rem">
+            <span class="price-val fm" id="price-val">—</span>
+            <button class="price-refresh-btn" id="btn-price-refresh" onclick="refreshPrice()" title="주가 새로고침">↻</button>
+          </div>
           <span class="price-chg fm" id="price-chg">—</span>
         </div>
         <div class="topbar-actions">
@@ -965,6 +974,12 @@ function updateSaveRemoveButtons(){
 function hideTopbar(){document.getElementById('app-topbar').classList.remove('visible');}
 function hideSummaryBox(){document.getElementById('summary-box').classList.remove('visible');}
 
+function refreshPrice(){
+  if(!currentStock||currentStock.market==='KR')return;
+  priceCache.delete(currentStock.ticker);
+  fetchPrice(currentStock.ticker,currentStock.market);
+}
+
 // ━━━ 주가 (US) ━━━
 async function fetchPrice(ticker,market){
   const priceEl=document.getElementById('topbar-price');
@@ -1016,6 +1031,13 @@ function initSearch(){
     if(!e.target.closest('.search-wrap'))dd.classList.remove('open');
     if(!e.target.closest('.welcome-search-field'))wdd.classList.remove('open');
   });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape'){
+      dd.classList.remove('open');wdd.classList.remove('open');
+      if(document.getElementById('wl-panel')?.classList.contains('open'))closeWatchlist();
+    }
+  });
+  addSearchKeyboardNav(inp,dd);
   if(winp){
     winp.addEventListener('input',e=>{
       clearTimeout(searchTimerW);
@@ -1023,7 +1045,35 @@ function initSearch(){
       if(!q){wdd.classList.remove('open');wdd.innerHTML='';return;}
       searchTimerW=setTimeout(()=>doSearch(q,winp,wdd),260);
     });
+    addSearchKeyboardNav(winp,wdd);
   }
+}
+function addSearchKeyboardNav(inp,dd){
+  inp.addEventListener('keydown',e=>{
+    const items=[...dd.querySelectorAll('.dd-item')];
+    if(!items.length)return;
+    const sel=dd.querySelector('.dd-item.selected');
+    let idx=items.indexOf(sel);
+    if(e.key==='ArrowDown'){
+      e.preventDefault();
+      sel?.classList.remove('selected');
+      items[Math.min(idx+1,items.length-1)].classList.add('selected');
+    }else if(e.key==='ArrowUp'){
+      e.preventDefault();
+      if(idx>0){sel?.classList.remove('selected');items[idx-1].classList.add('selected');}
+    }else if(e.key==='Enter'){
+      e.preventDefault();
+      const target=sel||items[0];
+      if(target)target.click();
+    }
+  });
+}
+function quickAddToWatchlist(ticker,name,market,btn){
+  if(isGuest||!currentUser){showToast('로그인 후 관심종목을 저장할 수 있습니다');return;}
+  const stock={ticker,name,market};
+  addToWatchlist(stock,null).then(()=>{
+    btn.textContent='✓';btn.classList.add('in-wl');btn.title='관심종목에 있음';
+  });
 }
 async function doSearch(q,inputEl,dd){
   dd.innerHTML='<div class="dd-msg">검색 중...</div>';dd.classList.add('open');
@@ -1043,7 +1093,9 @@ async function doSearch(q,inputEl,dd){
   dd.innerHTML='';
   results.slice(0,8).forEach(stock=>{
     const el=document.createElement('div');el.className='dd-item';
-    el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker fm">${esc(stock.ticker)}</span><span class="dd-mkt fm">${stock.market==='KR'?'KRX':'US'}</span></div>`;
+    const inWl=!!(portfolio.find(p=>p.ticker===stock.ticker));
+    const addBtnHtml=(!isGuest&&currentUser)?`<button class="dd-add-btn fm${inWl?' in-wl':''}" onclick="event.stopPropagation();quickAddToWatchlist('${esc(stock.ticker)}','${esc(stock.name)}','${stock.market}',this)" title="${inWl?'관심종목에 있음':'관심종목 추가'}">${inWl?'✓':'+'}</button>`:'';
+    el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker fm">${esc(stock.ticker)}</span><span class="dd-mkt fm">${stock.market==='KR'?'KRX':'US'}</span>${addBtnHtml}</div>`;
     el.onclick=()=>{if(inputEl)inputEl.value='';dd.classList.remove('open');dd.innerHTML='';selectStock(stock);};
     dd.appendChild(el);
   });
