@@ -643,7 +643,7 @@ let sb=null,currentUser=null,isGuest=false;
 let portfolio=[],groups=[],currentStock=null;
 let searchTimer=null,searchTimerW=null,appEntered=false,searchInited=false;
 let apiSecret='',briefFetching=false,currentFilter='all';
-const briefCache=new Map(),priceCache=new Map();
+const briefCache=new Map(),priceCache=new Map(),ddStockMap={};
 const BRIEF_TTL=60*60*1000,PRICE_TTL=5*60*1000;
 
 function apiHeaders(extra={}){const h={...extra};if(apiSecret)h['X-Api-Key']=apiSecret;return h;}
@@ -901,8 +901,11 @@ async function addToWatchlist(stock,groupId){
       portfolio.push(data);
       renderWatchlistPanel();renderWatchlistSummary();updateSaveRemoveButtons();
       showToast(`${stock.market==='KR'?stock.name:stock.ticker} 관심종목에 추가됐습니다`);
-    }else if(error?.code==='42P01'){showToast('DB 테이블 오류. setup.sql을 확인해 주세요.');}
-  }catch(e){console.error('Watchlist save error:',e.message);}
+    }else if(error){
+      console.error('addToWatchlist DB error:',error);
+      showToast(error.code==='42P01'?'DB 오류 — 테이블 없음':`추가 실패: ${error.message||error.code||'알 수 없는 오류'}`);
+    }
+  }catch(e){console.error('Watchlist save error:',e.message);showToast(`오류: ${e.message}`);}
 }
 async function removeFromWatchlist(id){
   if(!sb||!currentUser)return;
@@ -1090,12 +1093,15 @@ function addSearchKeyboardNav(inp,dd){
     }
   });
 }
-function quickAddToWatchlist(ticker,name,market,btn){
+function quickAddToWatchlist(ticker,btn){
   if(isGuest||!currentUser){showToast('로그인 후 관심종목을 저장할 수 있습니다');return;}
-  const stock={ticker,name,market};
-  addToWatchlist(stock,null).then(()=>{
-    btn.textContent='✓';btn.classList.add('in-wl');btn.title='관심종목에 있음';
-  });
+  if(portfolio.find(p=>p.ticker===ticker)){showToast('이미 관심종목에 있습니다');return;}
+  const stock=ddStockMap[ticker];
+  if(!stock)return;
+  document.getElementById('search-dd')?.classList.remove('open');
+  document.getElementById('welcome-search-dd')?.classList.remove('open');
+  selectStock(stock);
+  setTimeout(()=>showAddToWatchlistPopup(),80);
 }
 async function doSearch(q,inputEl,dd){
   dd.innerHTML='<div class="dd-msg">검색 중...</div>';dd.classList.add('open');
@@ -1114,10 +1120,20 @@ async function doSearch(q,inputEl,dd){
   if(!results.length){dd.innerHTML='<div class="dd-msg">검색 결과 없음</div>';return;}
   dd.innerHTML='';
   results.slice(0,8).forEach(stock=>{
+    ddStockMap[stock.ticker]=stock;
     const el=document.createElement('div');el.className='dd-item';
     const inWl=!!(portfolio.find(p=>p.ticker===stock.ticker));
-    const addBtnHtml=(!isGuest&&currentUser)?`<button class="dd-add-btn fm${inWl?' in-wl':''}" onclick="event.stopPropagation();quickAddToWatchlist('${esc(stock.ticker)}','${esc(stock.name)}','${stock.market}',this)" title="${inWl?'관심종목에 있음':'관심종목 추가'}">${inWl?'✓':'+'}</button>`:'';
-    el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker fm">${esc(stock.ticker)}</span><span class="dd-mkt fm">${stock.market==='KR'?'KRX':'US'}</span>${addBtnHtml}</div>`;
+    if(!isGuest&&currentUser){
+      const addBtn=document.createElement('button');
+      addBtn.className=`dd-add-btn fm${inWl?' in-wl':''}`;
+      addBtn.title=inWl?'관심종목에 있음':'관심종목 추가';
+      addBtn.textContent=inWl?'✓':'+';
+      addBtn.onclick=e=>{e.stopPropagation();quickAddToWatchlist(stock.ticker,addBtn);};
+      el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker fm">${esc(stock.ticker)}</span><span class="dd-mkt fm">${stock.market==='KR'?'KRX':'US'}</span></div>`;
+      el.querySelector('.dd-meta').appendChild(addBtn);
+    }else{
+      el.innerHTML=`<span class="dd-name">${esc(stock.name)}</span><div class="dd-meta"><span class="dd-ticker fm">${esc(stock.ticker)}</span><span class="dd-mkt fm">${stock.market==='KR'?'KRX':'US'}</span></div>`;
+    }
     el.onclick=()=>{if(inputEl)inputEl.value='';dd.classList.remove('open');dd.innerHTML='';selectStock(stock);};
     dd.appendChild(el);
   });
