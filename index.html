@@ -330,7 +330,7 @@ body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-se
 .wl-group-confirm:hover{background:var(--gold-b)}
 
 /* 그룹 선택 팝업 */
-.gsp{position:absolute;bottom:calc(100% + .5rem);right:0;min-width:220px;background:#081828;border:1px solid rgba(196,154,56,.2);border-radius:.875rem;overflow:hidden;z-index:400;box-shadow:0 -20px 56px rgba(0,0,0,.7)}
+.gsp{position:fixed;min-width:220px;background:#081828;border:1px solid rgba(196,154,56,.2);border-radius:.875rem;overflow:hidden;z-index:400;box-shadow:0 -20px 56px rgba(0,0,0,.7)}
 .gsp-hdr{padding:.65rem 1.25rem;font-family:'IBM Plex Mono',monospace;font-size:.65rem;letter-spacing:.15em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
 .gsp-item{padding:.85rem 1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--border);transition:background .1s;font-size:.92rem;color:var(--text-2)}
 .gsp-item:last-child{border-bottom:none}.gsp-item:hover{background:rgba(201,169,98,.05)}
@@ -941,7 +941,9 @@ function showAddToWatchlistPopup(){
     html+=`<div class="gsp-create" onclick="showGspNewForm()">＋ 새 그룹 만들기</div>`;
     popup.innerHTML=html;
   }
-  saveBtn.parentElement.appendChild(popup);
+  const r=saveBtn.getBoundingClientRect();
+  popup.style.cssText=`position:fixed;top:${r.bottom+8}px;right:${window.innerWidth-r.right}px;`;
+  document.body.appendChild(popup);
   setTimeout(()=>{document.getElementById('gsp-inp')?.focus();document.addEventListener('click',onOutsideGspClick);},10);
 }
 function showGspNewForm(){
@@ -967,7 +969,7 @@ function closeGroupSelectPopup(){
 function onOutsideGspClick(e){
   const p=document.getElementById('gsp');
   const saveBtn=document.getElementById('btn-save-stock');
-  if(p&&!p.contains(e.target)&&e.target!==saveBtn)closeGroupSelectPopup();
+  if(p&&!p.contains(e.target)&&!saveBtn?.contains(e.target))closeGroupSelectPopup();
 }
 
 // ━━━ Stock selection ━━━
