@@ -950,7 +950,7 @@ function showAddToWatchlistPopup(){
       const cnt=portfolio.filter(p=>p.group_id===g.id).length;
       html+=`<div class="gsp-item" onclick="addToWatchlist(currentStock,'${g.id}');closeGroupSelectPopup()"><span>${esc(g.name)}</span><span class="gsp-cnt">${cnt}개</span></div>`;
     });
-    html+=`<div class="gsp-create" onclick="showGspNewForm()">＋ 새 그룹 만들기</div>`;
+    html+=`<div class="gsp-create" onclick="event.stopPropagation();showGspNewForm()">＋ 새 그룹 만들기</div>`;
     popup.innerHTML=html;
   }
   const r=saveBtn.getBoundingClientRect();
