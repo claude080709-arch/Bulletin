@@ -293,14 +293,21 @@ body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-se
 .wl-group-hdr{padding:.6rem 1.5rem;display:flex;align-items:center;justify-content:space-between}
 .wl-group-name{font-family:'IBM Plex Mono',monospace;font-size:.72rem;letter-spacing:.14em;text-transform:uppercase;color:var(--gold)}
 .wl-group-cnt{font-family:'IBM Plex Mono',monospace;font-size:.68rem;color:var(--muted);margin-left:.4rem}
-.wl-group-del{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.2rem .5rem;font-size:.75rem;transition:color .15s;margin-left:auto}
+.wl-group-actions{display:flex;align-items:center;gap:.1rem;margin-left:auto}
+.wl-group-rename{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.2rem .4rem;font-size:.72rem;transition:color .15s}
+.wl-group-rename:hover{color:var(--gold)}
+.wl-group-del{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.2rem .4rem;font-size:.75rem;transition:color .15s}
 .wl-group-del:hover{color:var(--negative)}
 .wl-stock-item{padding:.8rem 1.5rem .8rem 2rem;display:flex;align-items:center;justify-content:space-between;cursor:pointer;transition:background .1s;border-bottom:1px solid var(--border)}
 .wl-stock-item:hover{background:rgba(201,169,98,.04)}
 .wl-stock-name{font-size:.95rem;color:var(--text-2);line-height:1.3}
 .wl-stock-ticker{font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:var(--muted);margin-top:.1rem}
-.wl-stock-del{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.3rem .5rem;font-size:.9rem;transition:color .15s;flex-shrink:0;margin-left:.5rem}
+.wl-stock-btns{display:flex;align-items:center;gap:.1rem;flex-shrink:0;margin-left:.5rem}
+.wl-stock-move{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.3rem .4rem;font-size:.78rem;transition:color .15s}
+.wl-stock-move:hover{color:rgba(196,154,56,.6)}
+.wl-stock-del{background:none;border:none;color:rgba(232,228,220,.15);cursor:pointer;padding:.3rem .4rem;font-size:.9rem;transition:color .15s;flex-shrink:0}
 .wl-stock-del:hover{color:var(--negative)}
+.move-popup{position:absolute;right:0;bottom:calc(100% + 4px);min-width:180px;background:#081828;border:1px solid rgba(196,154,56,.2);border-radius:.75rem;overflow:hidden;z-index:700;box-shadow:0 -16px 40px rgba(0,0,0,.7)}
 .wl-empty-msg{padding:2.5rem 1.5rem;text-align:center;font-family:'IBM Plex Mono',monospace;font-size:.8rem;color:var(--muted);line-height:1.9}
 .wl-panel-footer{padding:.5rem 0;border-top:1px solid var(--border);flex-shrink:0}
 .wl-add-group-btn{width:calc(100% - 3rem);margin:.75rem 1.5rem;padding:.8rem;background:transparent;border:1px dashed rgba(196,154,56,.22);border-radius:.75rem;color:rgba(196,154,56,.55);font-family:'IBM Plex Mono',monospace;font-size:.75rem;letter-spacing:.08em;text-transform:uppercase;cursor:pointer;transition:all .2s}
@@ -487,7 +494,7 @@ body{background:var(--void);color:var(--text);font-family:'Noto Sans KR',sans-se
   <footer>
     <div class="auth-footer-inner">
       <div><div class="auth-footer-brand">Bulletin.</div><div class="auth-footer-sub">Market Intelligence Platform</div></div>
-      <div class="auth-footer-copy">© 2025 Bulletin. Not investment advice.</div>
+      <div class="auth-footer-copy">© 2026 Bulletin. Not investment advice.</div>
     </div>
   </footer>
 </div>
@@ -828,7 +835,7 @@ function renderWatchlistPanel(){
   let html='';
   groups.forEach(g=>{
     const stocks=grouped[g.id]||[];
-    html+=`<div class="wl-group-block"><div class="wl-group-hdr"><span class="wl-group-name">${esc(g.name)} <span class="wl-group-cnt">(${stocks.length})</span></span><button class="wl-group-del" onclick="event.stopPropagation();deleteGroup('${g.id}')" title="그룹 삭제">×</button></div>`;
+    html+=`<div class="wl-group-block"><div class="wl-group-hdr" id="wlgh-${g.id}"><span class="wl-group-name">${esc(g.name)} <span class="wl-group-cnt">(${stocks.length})</span></span><div class="wl-group-actions"><button class="wl-group-rename" onclick="event.stopPropagation();startRenameGroup('${g.id}')" title="이름 변경">✎</button><button class="wl-group-del" onclick="event.stopPropagation();deleteGroup('${g.id}')" title="그룹 삭제">×</button></div></div>`;
     if(stocks.length===0)html+=`<div style="padding:.5rem 2rem 1rem;font-family:'IBM Plex Mono',monospace;font-size:.72rem;color:rgba(232,228,220,.2)">비어있음</div>`;
     stocks.forEach(s=>{html+=renderWlStockHtml(s);});
     html+=`</div>`;
@@ -843,7 +850,9 @@ function renderWatchlistPanel(){
 function renderWlStockHtml(s){
   const dn=s.market==='KR'?s.name:s.ticker;
   const ds=s.market==='KR'?s.ticker:s.name;
-  return `<div class="wl-stock-item" onclick="closeWatchlist();selectStockById('${s.id}')"><div><div class="wl-stock-name">${esc(dn)}</div><div class="wl-stock-ticker">${esc(ds)}</div></div><button class="wl-stock-del" onclick="event.stopPropagation();removeFromWatchlist('${s.id}')" title="삭제">×</button></div>`;
+  const canMove=groups.length>0||s.group_id;
+  const moveBtn=canMove?`<button class="wl-stock-move" onclick="event.stopPropagation();showMovePopup('${s.id}',this)" title="그룹 이동">⇄</button>`:'';
+  return `<div class="wl-stock-item" id="wls-${s.id}" onclick="closeWatchlist();selectStockById('${s.id}')"><div><div class="wl-stock-name">${esc(dn)}</div><div class="wl-stock-ticker">${esc(ds)}</div></div><div class="wl-stock-btns">${moveBtn}<button class="wl-stock-del" onclick="event.stopPropagation();removeFromWatchlist('${s.id}')" title="삭제">×</button></div></div>`;
 }
 
 // ━━━ Watchlist data ━━━
@@ -985,6 +994,7 @@ function displayPrice(data){
   valEl.textContent=`$${data.current.toFixed(2)}`;
   const isPos=data.change>=0;
   chgEl.textContent=`${isPos?'+':''}${data.change.toFixed(2)} (${isPos?'+':''}${data.changePct.toFixed(2)}%)`;
+  chgEl.style.color='';
   chgEl.className='price-chg fm '+(isPos?'pos':'neg');
   priceEl.style.display='flex';
 }
@@ -1136,14 +1146,17 @@ function renderBriefing(list,cacheTs){
     const hidden=currentFilter!=='all'&&currentFilter!==cls;
     html+=`<div class="news-card ${cls}" id="card-${i}" data-s="${cls}"${hidden?' style="display:none"':''}><div class="card-head" onclick="toggleCard(${i})"><div class="card-top-row"><span class="card-title">${esc(item.title)}</span><span class="card-toggle fm" id="toggle-${i}">상세 ↓</span></div><div class="card-verdict-row"><span class="sentiment-badge ${cls} fm">${icon} ${esc(item.sentiment)}</span><span class="card-verdict">${esc(verdict)}</span></div></div><div class="card-detail" id="detail-${i}"><div class="card-summary-text">${esc(item.summary)}</div><div class="impact-row"><div class="impact"><div class="impact-lbl fm">단기 · 1-4주</div><div class="impact-val">${esc(item.impact_short)}</div></div><div class="impact"><div class="impact-lbl fm">장기 · 3개월+</div><div class="impact-val">${esc(item.impact_long)}</div></div></div>${safeUrl(item.url)?`<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">원문 보기 →</a></div>`:''}</div></div>`;
   });
-  html+='</div>';
+  html+='</div><div id="filter-empty" style="display:none;text-align:center;padding:3rem 2rem"><p class="fd" style="font-style:italic;font-size:1.05rem;color:var(--muted)">해당 시그널이 없습니다</p></div>';
   area.innerHTML=html;
   gsap.fromTo(area.querySelectorAll('.news-card'),{opacity:0,y:18},{opacity:1,y:0,duration:.45,stagger:.07,ease:'power3.out'});
 }
 function setFilter(f){
   currentFilter=f;
   document.querySelectorAll('.filter-tab').forEach(t=>t.classList.toggle('active',t.dataset.f===f));
-  document.querySelectorAll('.news-card').forEach(c=>{c.style.display=(f==='all'||c.dataset.s===f)?'':'none';});
+  let visible=0;
+  document.querySelectorAll('.news-card').forEach(c=>{const show=f==='all'||c.dataset.s===f;c.style.display=show?'':'none';if(show)visible++;});
+  const emptyEl=document.getElementById('filter-empty');
+  if(emptyEl)emptyEl.style.display=visible===0?'block':'none';
 }
 function extractVerdict(text){
   if(!text)return'';
@@ -1223,6 +1236,62 @@ function showView(name){
   document.getElementById('view-welcome').style.display=name==='welcome'?'block':'none';
   document.getElementById('view-stock').style.display=name==='stock'?'block':'none';
   if(name!=='stock')document.getElementById('app-topbar').classList.remove('visible');
+}
+
+// ━━━ Group rename ━━━
+function startRenameGroup(id){
+  const grp=groups.find(g=>g.id===id);
+  if(!grp)return;
+  const hdrEl=document.getElementById(`wlgh-${id}`);
+  if(!hdrEl)return;
+  hdrEl.innerHTML=`<input class="wl-group-input" id="rni-${id}" value="${esc(grp.name)}" maxlength="20" style="flex:1;font-size:.75rem;letter-spacing:0" onkeydown="if(event.key==='Enter')confirmRenameGroup('${id}');if(event.key==='Escape')renderWatchlistPanel()"><button class="wl-group-confirm" onclick="confirmRenameGroup('${id}')">확인</button>`;
+  setTimeout(()=>{const inp=document.getElementById(`rni-${id}`);if(inp){inp.focus();inp.select();}},30);
+}
+async function confirmRenameGroup(id){
+  const inp=document.getElementById(`rni-${id}`);
+  if(!inp)return;
+  const name=inp.value.trim();
+  if(!name){renderWatchlistPanel();return;}
+  if(!currentUser||!sb)return;
+  const{error}=await sb.from('watchlist_groups').update({name}).eq('id',id);
+  if(!error){
+    const grp=groups.find(g=>g.id===id);
+    if(grp)grp.name=name;
+    renderWatchlistPanel();renderWatchlistSummary();
+    showToast(`그룹 이름이 '${name}'으로 변경됐습니다`);
+  }else{showToast('이름 변경에 실패했습니다');renderWatchlistPanel();}
+}
+
+// ━━━ Move stock ━━━
+function showMovePopup(stockId,btn){
+  document.querySelectorAll('.move-popup').forEach(p=>p.remove());
+  const s=portfolio.find(p=>p.id===stockId);
+  if(!s)return;
+  const itemEl=document.getElementById(`wls-${stockId}`);
+  if(!itemEl)return;
+  const popup=document.createElement('div');
+  popup.className='move-popup';
+  let html=`<div class="gsp-hdr">그룹 이동</div>`;
+  if(s.group_id)html+=`<div class="gsp-item" onclick="moveStockToGroup('${stockId}',null)"><span>기타 (그룹 없음)</span></div>`;
+  groups.filter(g=>g.id!==s.group_id).forEach(g=>{
+    html+=`<div class="gsp-item" onclick="moveStockToGroup('${stockId}','${g.id}')"><span>${esc(g.name)}</span></div>`;
+  });
+  popup.innerHTML=html;
+  itemEl.style.position='relative';
+  itemEl.appendChild(popup);
+  setTimeout(()=>document.addEventListener('click',function onOut(e){if(!popup.contains(e.target)){popup.remove();document.removeEventListener('click',onOut);}},10));
+}
+async function moveStockToGroup(stockId,groupId){
+  document.querySelectorAll('.move-popup').forEach(p=>p.remove());
+  if(!currentUser||!sb)return;
+  const{error}=await sb.from('portfolios').update({group_id:groupId}).eq('id',stockId);
+  if(!error){
+    const s=portfolio.find(p=>p.id===stockId);
+    if(s)s.group_id=groupId;
+    renderWatchlistPanel();renderWatchlistSummary();
+    const grp=groupId?groups.find(g=>g.id===groupId):null;
+    showToast(grp?`'${grp.name}'으로 이동됐습니다`:'기타로 이동됐습니다');
+  }else{showToast('이동에 실패했습니다');}
 }
 
 // ━━━ Utils ━━━
