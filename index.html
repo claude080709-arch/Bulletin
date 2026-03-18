@@ -367,6 +367,20 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
   .portfolio-summary-grid{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
   .wl-panel{width:100%}
 }
+/* ── Portfolio Brief ── */
+.pb-header{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.5rem;border-bottom:1px solid var(--border)}
+.pb-title{font-family:'Inter','Pretendard',sans-serif;font-size:.7rem;font-weight:700;letter-spacing:.2em;text-transform:uppercase;color:var(--muted)}
+.pb-close{background:transparent;border:none;color:var(--muted);cursor:pointer;font-size:1rem;padding:.25rem .6rem;transition:color .2s;border-radius:.4rem}.pb-close:hover{color:var(--text);background:rgba(255,255,255,.05)}
+.pb-tabs{display:flex;gap:.45rem;padding:.7rem 1.5rem;border-bottom:1px solid var(--border);overflow-x:auto;flex-wrap:nowrap;scrollbar-width:none;align-items:center}.pb-tabs::-webkit-scrollbar{display:none}
+.pb-tab{flex-shrink:0;padding:.45rem .85rem;border-radius:.5rem;border:1px solid var(--border-b);background:transparent;color:var(--muted);font-family:'Pretendard','Inter',sans-serif;font-size:.8rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.35rem;white-space:nowrap}
+.pb-tab:hover{border-color:rgba(201,169,98,.3);color:var(--text-2)}.pb-tab.active{border-color:rgba(201,169,98,.5);background:rgba(201,169,98,.08);color:var(--text)}
+.pb-tab.s-pos{border-color:rgba(52,211,153,.25);color:var(--positive)}.pb-tab.s-pos.active{background:rgba(52,211,153,.07)}
+.pb-tab.s-neg{border-color:rgba(248,113,113,.25);color:var(--negative)}.pb-tab.s-neg.active{background:rgba(248,113,113,.07)}
+.pb-tab.s-neu{border-color:rgba(201,169,98,.2);color:var(--gold)}.pb-tab.s-neu.active{background:rgba(201,169,98,.05)}
+.pb-tab.s-loading{opacity:.6}.pb-spin{width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
+.pb-badge{font-size:.72rem;opacity:.85}.pb-progress{padding:.4rem 1.5rem;font-family:'Inter','Pretendard',sans-serif;font-size:.7rem;color:var(--muted);letter-spacing:.04em;min-height:1.6rem}
+.pb-start-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1.1rem;background:rgba(201,169,98,.1);border:1px solid rgba(201,169,98,.25);border-radius:.65rem;color:var(--gold);font-family:'Inter','Pretendard',sans-serif;font-size:.75rem;font-weight:600;letter-spacing:.05em;cursor:pointer;transition:all .2s;margin-top:1.2rem}
+.pb-start-btn:hover{background:rgba(201,169,98,.18);border-color:rgba(201,169,98,.45)}.pb-start-btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 
@@ -608,6 +622,9 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
               <span class="ps-sublabel fm" id="ps-sublabel"></span>
             </div>
             <div id="wl-summary-content"></div>
+            <button class="pb-start-btn fm" id="pb-start-btn" onclick="showPortfolioBrief()">
+              ⚡ 포트폴리오 전체 분석
+            </button>
           </div>
           <div class="welcome-hints">
             <div class="welcome-hint"><div class="hint-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><polyline points="4,8 8,12 12,8 16,12 20,8"/></svg></div><div class="hint-title fm">실시간 뉴스</div><div class="hint-desc">KRX·미국 시장 최신 기사를 수량 제한 없이 수집</div></div>
@@ -632,6 +649,16 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
           </div>
           <div id="brief-area"></div>
         </div>
+      </div>
+
+      <div id="view-portfolio-brief" style="display:none;">
+        <div class="pb-header">
+          <span class="pb-title fm">포트폴리오 분석</span>
+          <button class="pb-close" onclick="showView('welcome')">✕ 닫기</button>
+        </div>
+        <div class="pb-tabs" id="pb-tabs"></div>
+        <div class="pb-progress" id="pb-progress"></div>
+        <div id="pb-content"></div>
       </div>
 
     </main>
@@ -1339,6 +1366,7 @@ function goHome(){
 function showView(name){
   document.getElementById('view-welcome').style.display=name==='welcome'?'block':'none';
   document.getElementById('view-stock').style.display=name==='stock'?'block':'none';
+  document.getElementById('view-portfolio-brief').style.display=name==='portfolio-brief'?'block':'none';
   if(name!=='stock')document.getElementById('app-topbar').classList.remove('visible');
 }
 
@@ -1407,6 +1435,135 @@ function showToast(msg,duration=2500){
 }
 function esc(s){if(!s)return'';return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');}
 function safeUrl(url){if(!url)return'';try{const u=new URL(url);return(u.protocol==='http:'||u.protocol==='https:')?url:'';}catch{return'';}}
+
+// ━━━ Portfolio Brief ━━━
+let pbResults={},pbActive=null,pbRunning=false;
+
+function showPortfolioBrief(){
+  if(!portfolio.length){showToast('관심종목을 먼저 추가하세요');return;}
+  showView('portfolio-brief');
+  pbResults={};pbActive=null;
+  document.getElementById('pb-progress').textContent='';
+  document.getElementById('pb-content').innerHTML='';
+  renderPbTabs();
+  if(!pbRunning)runPortfolioBrief();
+}
+
+function renderPbTabs(){
+  const stocks=[...new Map(portfolio.map(p=>[p.ticker,p])).values()];
+  document.getElementById('pb-tabs').innerHTML=stocks.map(s=>{
+    const res=pbResults[s.ticker];
+    const label=s.market==='KR'?s.name:s.ticker;
+    let cls='pb-tab',badge='';
+    if(res==='loading'){
+      cls+=' s-loading'+(pbActive===s.ticker?' active':'');
+      badge=`<span class="pb-spin"></span>`;
+    }else if(res&&res.done){
+      cls+=res.pos>res.neg?' s-pos':res.neg>res.pos?' s-neg':' s-neu';
+      if(pbActive===s.ticker)cls+=' active';
+      badge=`<span class="pb-badge">${res.pos>res.neg?'↑':res.neg>res.pos?'↓':'—'}</span>`;
+    }else{
+      if(pbActive===s.ticker)cls+=' active';
+    }
+    return `<button class="${cls}" onclick="selectPbTab('${s.ticker}')">${esc(label)}${badge}</button>`;
+  }).join('');
+}
+
+function selectPbTab(ticker){
+  pbActive=ticker;
+  renderPbTabs();
+  const res=pbResults[ticker];
+  const content=document.getElementById('pb-content');
+  if(!res||res==='loading'){
+    content.innerHTML=`<div style="text-align:center;padding:5rem 2rem"><div class="loader"></div><div class="loader-label fm">분석 중...</div></div>`;
+  }else if(res.done){
+    renderPbContent(ticker,res);
+  }
+}
+
+function renderPbContent(ticker,res){
+  const content=document.getElementById('pb-content');
+  if(!res.analyses.length){
+    content.innerHTML=`<div style="text-align:center;padding:5rem 2rem;color:var(--muted)">${esc(res.error||'뉴스를 찾지 못했습니다')}</div>`;
+    return;
+  }
+  const clsMap={'호재':'up','악재':'down','중립':'flat'};
+  const iconMap={'호재':'↑','악재':'↓','중립':'—'};
+  const counts={'호재':0,'악재':0,'중립':0};
+  res.analyses.forEach(a=>{counts[normalizeSentiment(a.sentiment)]++;});
+  const total=res.analyses.length,pos=counts['호재'],neg=counts['악재'];
+  const verdict=pos>neg&&pos>=total/2?`총 ${total}개 중 ${pos}개가 호재 — 전반적으로 긍정적인 흐름입니다.`
+    :neg>pos&&neg>=total/2?`총 ${total}개 중 ${neg}개가 악재 — 단기 주의가 필요합니다.`
+    :`호재 ${pos}개 vs 악재 ${neg}개 — 혼조세입니다.`;
+  const pillsHtml=Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>`<span class="summary-pill ${{호재:'pos',악재:'neg',중립:'neu'}[k]} fm">${iconMap[k]} ${k} ${v}</span>`).join('');
+  const ts=new Date(res.ts).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'});
+  let html=`<div class="app-content-inner"><div class="summary-box visible"><div class="summary-head"><div class="summary-label fm">시그널 요약</div></div><div class="summary-body"><div class="summary-pills">${pillsHtml}</div><div class="summary-verdict">${esc(verdict)}</div></div></div><div class="brief-header"><div class="brief-meta fm"><div class="brief-dot"></div>분석 브리핑 · ${ts}</div><div class="brief-count fm">${total}개 기사 분석</div></div><div class="cards-grid">`;
+  res.analyses.forEach((item,i)=>{
+    const sent=normalizeSentiment(item.sentiment);
+    const cls=clsMap[sent]||'flat';
+    const icon=iconMap[sent]||'—';
+    const v=extractVerdict(item.summary||'');
+    html+=`<div class="news-card ${cls}"><div class="card-head" onclick="this.nextElementSibling.style.display=this.nextElementSibling.style.display==='block'?'none':'block';this.querySelector('.card-toggle').textContent=this.nextElementSibling.style.display==='block'?'접기 ↑':'상세 ↓'"><div class="card-top-row"><span class="card-title">${esc(item.title)}</span><span class="card-toggle fm">상세 ↓</span></div><div class="card-verdict-row"><span class="sentiment-badge ${cls} fm">${icon} ${esc(sent)}</span><span class="card-verdict">${esc(v)}</span></div></div><div class="card-detail" style="display:none"><div class="card-summary-text">${esc(item.summary)}</div><div class="impact-row"><div class="impact"><div class="impact-lbl fm">단기 · 1-4주</div><div class="impact-val">${esc(item.impact_short)}</div></div><div class="impact"><div class="impact-lbl fm">장기 · 3개월+</div><div class="impact-val">${esc(item.impact_long)}</div></div></div>${safeUrl(item.url)?`<div class="card-link-row"><a href="${esc(safeUrl(item.url))}" target="_blank" rel="noopener" class="card-link fm">원문 보기 →</a></div>`:''}</div></div>`;
+  });
+  html+='</div></div>';
+  content.innerHTML=html;
+}
+
+async function runPortfolioBrief(){
+  pbRunning=true;
+  const stocks=[...new Map(portfolio.map(p=>[p.ticker,p])).values()];
+  const prog=document.getElementById('pb-progress');
+  for(let i=0;i<stocks.length;i++){
+    const s=stocks[i];
+    // 캐시 있으면 재사용
+    const cached=briefCache.get(s.ticker);
+    if(cached&&Date.now()-cached.ts<BRIEF_TTL){
+      const counts={'호재':0,'악재':0,'중립':0};
+      cached.analyses.forEach(a=>{counts[normalizeSentiment(a.sentiment)]++;});
+      pbResults[s.ticker]={done:true,analyses:cached.analyses,ts:cached.ts,pos:counts['호재'],neg:counts['악재']};
+      if(!pbActive){pbActive=s.ticker;selectPbTab(s.ticker);}else renderPbTabs();
+      prog.textContent=`${i+1} / ${stocks.length} 완료`;
+      continue;
+    }
+    prog.textContent=`${i+1} / ${stocks.length} 분석 중...`;
+    pbResults[s.ticker]='loading';
+    if(!pbActive)pbActive=s.ticker;
+    renderPbTabs();
+    if(pbActive===s.ticker)document.getElementById('pb-content').innerHTML=`<div style="text-align:center;padding:5rem 2rem"><div class="loader"></div><div class="loader-label fm">${esc(s.market==='KR'?s.name:s.ticker)} 분석 중...</div></div>`;
+    try{
+      let articles=[];
+      if(s.market==='KR'){
+        const r=await fetch(`/api/naver?query=${encodeURIComponent(s.name)}`,{headers:apiHeaders()});
+        const d=await r.json();
+        articles=(d.items||[]).map(a=>({title:a.title,description:a.description,url:a.originallink||a.link}));
+      }else{
+        const r=await fetch(`/api/finnhub?symbol=${encodeURIComponent(s.ticker)}`,{headers:apiHeaders()});
+        const d=await r.json();
+        articles=(Array.isArray(d)?d:[]).map(a=>({title:a.headline,description:a.summary,url:a.url}));
+      }
+      if(articles.length){
+        const gr=await fetch('/api/groq',{method:'POST',headers:apiHeaders({'Content-Type':'application/json'}),body:JSON.stringify({ticker:s.ticker,name:s.name,articles,market:s.market})});
+        const gd=await gr.json().catch(()=>({}));
+        const analyses=gd.analyses||[];
+        const now=Date.now();
+        const counts={'호재':0,'악재':0,'중립':0};
+        analyses.forEach(a=>{counts[normalizeSentiment(a.sentiment)]++;});
+        pbResults[s.ticker]={done:true,analyses,ts:now,pos:counts['호재'],neg:counts['악재']};
+        if(analyses.length)briefCache.set(s.ticker,{analyses,ts:now});
+      }else{
+        pbResults[s.ticker]={done:true,analyses:[],ts:Date.now(),pos:0,neg:0,error:'뉴스 없음'};
+      }
+    }catch(e){
+      pbResults[s.ticker]={done:true,analyses:[],ts:Date.now(),pos:0,neg:0,error:e.message};
+    }
+    if(pbActive===s.ticker)selectPbTab(s.ticker);
+    else renderPbTabs();
+    prog.textContent=`${i+1} / ${stocks.length} 완료`;
+    if(i<stocks.length-1)await new Promise(r=>setTimeout(r,1200));
+  }
+  prog.textContent=`✓ 전체 ${stocks.length}개 종목 분석 완료`;
+  pbRunning=false;
+}
 
 initApp();
 </script>
