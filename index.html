@@ -1218,9 +1218,9 @@ function renderSummaryBox(list){
   pillsEl.innerHTML=Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>`<span class="summary-pill ${clsMap[k]} fm">${iconMap[k]} ${k} ${v}</span>`).join('');
   const total=list.length,pos=counts['호재'],neg=counts['악재'];
   let verdict='';
-  if(pos>neg&&pos>=total/2)verdict=`총 ${total}개 중 ${pos}개가 호재 — 전반적으로 긍정적인 흐름입니다.`;
-  else if(neg>pos&&neg>=total/2)verdict=`총 ${total}개 중 ${neg}개가 악재 — 단기 주의가 필요합니다.`;
-  else verdict=`호재 ${pos}개 vs 악재 ${neg}개 — 혼조세입니다.`;
+  if(pos>neg&&pos>=total/2)verdict=`전반적으로 긍정적인 흐름입니다.`;
+  else if(neg>pos&&neg>=total/2)verdict=`전반적으로 부정적인 흐름입니다. 단기 주의가 필요합니다.`;
+  else verdict=`호재·악재가 혼조세입니다.`;
   verdictEl.textContent=verdict;
   box.classList.add('visible');
 }

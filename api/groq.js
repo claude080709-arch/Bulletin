@@ -24,8 +24,8 @@ export default async function handler(req, res) {
   const { ticker, name, market } = req.body;
   let { articles } = req.body;
   if (!articles || articles.length === 0) return res.json({ analyses: [] });
-  // 기사 최대 10개 제한 (Groq TPM 6000 한도 내에서 처리)
-  articles = articles.slice(0, 10);
+  // 기사 최대 20개 (Groq llama-3.3-70b 속도 기준 10초 내 처리 가능)
+  articles = articles.slice(0, 20);
 
   const clean = (str) =>
     str
