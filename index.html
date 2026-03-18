@@ -379,8 +379,8 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
 .pb-tab.s-neu{border-color:rgba(201,169,98,.2);color:var(--gold)}.pb-tab.s-neu.active{background:rgba(201,169,98,.05)}
 .pb-tab.s-loading{opacity:.6}.pb-spin{width:9px;height:9px;border:1.5px solid currentColor;border-top-color:transparent;border-radius:50%;animation:spin .7s linear infinite;display:inline-block;flex-shrink:0}
 .pb-badge{font-size:.72rem;opacity:.85}.pb-progress{padding:.4rem 1.5rem;font-family:'Inter','Pretendard',sans-serif;font-size:.7rem;color:var(--muted);letter-spacing:.04em;min-height:1.6rem}
-.pb-start-btn{display:inline-flex;align-items:center;gap:.45rem;padding:.6rem 1.1rem;background:rgba(201,169,98,.1);border:1px solid rgba(201,169,98,.25);border-radius:.65rem;color:var(--gold);font-family:'Inter','Pretendard',sans-serif;font-size:.75rem;font-weight:600;letter-spacing:.05em;cursor:pointer;transition:all .2s;margin-top:1.2rem}
-.pb-start-btn:hover{background:rgba(201,169,98,.18);border-color:rgba(201,169,98,.45)}.pb-start-btn:disabled{opacity:.4;cursor:not-allowed}
+.pb-start-btn{width:calc(100% - 3rem);margin:.5rem 1.5rem .75rem;padding:1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;background:rgba(201,169,98,.1);border:1px solid rgba(201,169,98,.3);border-radius:.75rem;color:var(--gold);font-family:'Inter','Pretendard',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.05em;cursor:pointer;transition:all .2s}
+.pb-start-btn:hover{background:rgba(201,169,98,.2);border-color:rgba(201,169,98,.55)}.pb-start-btn:disabled{opacity:.4;cursor:not-allowed}
 </style>
 </head>
 
@@ -558,6 +558,7 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
           onkeydown="if(event.key==='Enter')confirmCreateGroup();if(event.key==='Escape')hideCreateGroupForm()">
         <button class="wl-group-confirm" onclick="confirmCreateGroup()">확인</button>
       </div>
+      <button class="pb-start-btn fm" id="pb-start-btn" onclick="closeWatchlist();showPortfolioBrief()" style="display:none;">⚡ 포트폴리오 전체 분석</button>
     </div>
   </div>
 
@@ -622,9 +623,6 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
               <span class="ps-sublabel fm" id="ps-sublabel"></span>
             </div>
             <div id="wl-summary-content"></div>
-            <button class="pb-start-btn fm" id="pb-start-btn" onclick="showPortfolioBrief()">
-              ⚡ 포트폴리오 전체 분석
-            </button>
           </div>
           <div class="welcome-hints">
             <div class="welcome-hint"><div class="hint-icon"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="color:var(--gold);opacity:.7"><path d="M4 4h16v12H4z"/><path d="M8 20h8M12 16v4"/><polyline points="4,8 8,12 12,8 16,12 20,8"/></svg></div><div class="hint-title fm">실시간 뉴스</div><div class="hint-desc">KRX·미국 시장 최신 기사를 수량 제한 없이 수집</div></div>
@@ -885,6 +883,8 @@ function renderWatchlistPanel(){
   if(!body)return;
   if(countEl)countEl.textContent=portfolio.length>0?`· ${portfolio.length}개`:'';
   if(meta)meta.textContent=`${portfolio.length} / 20개`;
+  const pbBtn=document.getElementById('pb-start-btn');
+  if(pbBtn)pbBtn.style.display=(currentUser&&portfolio.length>0)?'flex':'none';
   if(!currentUser){body.innerHTML='<div class="wl-empty-msg">로그인 후 관심종목을<br>저장할 수 있습니다</div>';return;}
   if(portfolio.length===0&&groups.length===0){body.innerHTML='<div class="wl-empty-msg">관심종목이 없습니다<br>종목 검색 후 추가하세요</div>';return;}
   const grouped={};const ungrouped=[];
