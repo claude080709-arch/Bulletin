@@ -381,6 +381,9 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
 .pb-badge{font-size:.72rem;opacity:.85}.pb-progress{padding:.4rem 1.5rem;font-family:'Inter','Pretendard',sans-serif;font-size:.7rem;color:var(--muted);letter-spacing:.04em;min-height:1.6rem}
 .pb-start-btn{width:calc(100% - 3rem);margin:.5rem 1.5rem .75rem;padding:1rem;display:flex;align-items:center;justify-content:center;gap:.5rem;background:rgba(201,169,98,.1);border:1px solid rgba(201,169,98,.3);border-radius:.75rem;color:var(--gold);font-family:'Inter','Pretendard',sans-serif;font-size:.85rem;font-weight:600;letter-spacing:.05em;cursor:pointer;transition:all .2s}
 .pb-start-btn:hover{background:rgba(201,169,98,.2);border-color:rgba(201,169,98,.55)}.pb-start-btn:disabled{opacity:.4;cursor:not-allowed}
+.pb-action-desc{font-family:'Inter','Pretendard',sans-serif;font-size:.8rem;color:var(--muted);letter-spacing:.06em}
+.pb-action-btn{padding:1.1rem 2.8rem;background:rgba(201,169,98,.1);border:1px solid rgba(201,169,98,.35);border-radius:.9rem;color:var(--gold);font-family:'Inter','Pretendard',sans-serif;font-size:1rem;font-weight:700;letter-spacing:.06em;cursor:pointer;transition:all .2s;margin-top:.25rem}
+.pb-action-btn:hover{background:rgba(201,169,98,.22);border-color:rgba(201,169,98,.6);transform:translateY(-1px)}
 </style>
 </head>
 
@@ -558,7 +561,7 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
           onkeydown="if(event.key==='Enter')confirmCreateGroup();if(event.key==='Escape')hideCreateGroupForm()">
         <button class="wl-group-confirm" onclick="confirmCreateGroup()">확인</button>
       </div>
-      <button class="pb-start-btn fm" id="pb-start-btn" onclick="closeWatchlist();showPortfolioBrief()" style="display:none;">⚡ 포트폴리오 전체 분석</button>
+      <button class="pb-start-btn fm" id="pb-start-btn" onclick="closeWatchlist();showPortfolioBrief()" style="display:none;">📊 포트폴리오 분석 보기</button>
     </div>
   </div>
 
@@ -656,6 +659,10 @@ body{background:var(--void);color:var(--text);font-family:'Pretendard','Inter',s
         </div>
         <div class="pb-tabs" id="pb-tabs"></div>
         <div class="pb-progress" id="pb-progress"></div>
+        <div id="pb-action" style="display:none;flex-direction:column;align-items:center;justify-content:center;padding:4rem 2rem;gap:1rem;">
+          <div class="pb-action-desc fm">관심종목 <span id="pb-action-count"></span>개를 순차 분석합니다</div>
+          <button class="pb-action-btn fm" onclick="hidePbAction();runPortfolioBrief()">⚡ 포트폴리오 전체 분석 시작</button>
+        </div>
         <div id="pb-content"></div>
       </div>
 
@@ -1442,11 +1449,20 @@ let pbResults={},pbActive=null,pbRunning=false;
 function showPortfolioBrief(){
   if(!portfolio.length){showToast('관심종목을 먼저 추가하세요');return;}
   showView('portfolio-brief');
+  if(pbRunning)return;
   pbResults={};pbActive=null;
   document.getElementById('pb-progress').textContent='';
   document.getElementById('pb-content').innerHTML='';
   renderPbTabs();
-  if(!pbRunning)runPortfolioBrief();
+  const act=document.getElementById('pb-action');
+  const cnt=document.getElementById('pb-action-count');
+  const stocks=[...new Map(portfolio.map(p=>[p.ticker,p])).values()];
+  if(cnt)cnt.textContent=stocks.length;
+  if(act)act.style.display='flex';
+}
+function hidePbAction(){
+  const act=document.getElementById('pb-action');
+  if(act)act.style.display='none';
 }
 
 function renderPbTabs(){
