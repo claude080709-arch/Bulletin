@@ -1215,7 +1215,7 @@ function renderSummaryBox(list){
   list.forEach(a=>{counts[normalizeSentiment(a.sentiment)]++;});
   const clsMap={'호재':'pos','악재':'neg','중립':'neu'};
   const iconMap={'호재':'↑','악재':'↓','중립':'—'};
-  pillsEl.innerHTML=Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>`<span class="summary-pill ${clsMap[k]} fm">${iconMap[k]} ${k} ${v}</span>`).join('');
+  pillsEl.innerHTML=Object.entries(counts).filter(([,v])=>v>0).map(([k,v])=>`<span class="summary-pill ${clsMap[k]} fm">${iconMap[k]} ${k}</span>`).join('');
   const total=list.length,pos=counts['호재'],neg=counts['악재'];
   let verdict='';
   if(pos>neg&&pos>=total/2)verdict=`전반적으로 긍정적인 흐름입니다.`;
