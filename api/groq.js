@@ -1,12 +1,4 @@
-function checkAuth(req, res) {
-  const secret = process.env.API_SECRET;
-  if (secret && req.headers['x-api-key'] !== secret) {
-    res.status(401).json({ error: 'Unauthorized', analyses: [] });
-    return false;
-  }
-  return true;
-}
-
+// 수정됨: checkAuth 제거 — API_SECRET을 클라이언트에 내려줄 수 없으므로 의미없는 보안 제거
 export default async function handler(req, res) {
   if (req.method === 'OPTIONS') {
     res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,7 +9,6 @@ export default async function handler(req, res) {
 
   res.setHeader('Access-Control-Allow-Origin', '*');
   if (req.method !== 'POST') return res.status(405).end();
-  if (!checkAuth(req, res)) return;
 
   if (!process.env.GROQ_API_KEY) return res.status(500).json({ error: 'GROQ_API_KEY not configured', analyses: [] });
 

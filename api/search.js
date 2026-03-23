@@ -1,15 +1,6 @@
-function checkAuth(req, res) {
-  const secret = process.env.API_SECRET;
-  if (secret && req.headers['x-api-key'] !== secret) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return false;
-  }
-  return true;
-}
-
+// 수정됨: checkAuth 제거
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  if (!checkAuth(req, res)) return;
 
   const { q } = req.query;
   if (!q || q.length < 1) return res.json({ result: [] });

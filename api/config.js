@@ -4,9 +4,9 @@ export default function handler(req, res) {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
     return res.status(500).json({ error: 'Server configuration missing' });
   }
+  // 수정됨: apiSecret 제거 — 클라이언트에 서버 비밀 키 노출 금지
   res.json({
     supabaseUrl: process.env.SUPABASE_URL,
     supabaseAnonKey: process.env.SUPABASE_ANON_KEY,
-    apiSecret: process.env.API_SECRET || '',
   });
 }

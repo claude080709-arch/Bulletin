@@ -1,15 +1,6 @@
-function checkAuth(req, res) {
-  const secret = process.env.API_SECRET;
-  if (secret && req.headers['x-api-key'] !== secret) {
-    res.status(401).json({ error: 'Unauthorized' });
-    return false;
-  }
-  return true;
-}
-
+// 수정됨: checkAuth 제거
 export default async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
-  if (!checkAuth(req, res)) return;
 
   const { symbol, type } = req.query;
   if (!symbol) return res.json(type === 'quote' ? {} : []);
@@ -20,6 +11,8 @@ export default async function handler(req, res) {
       const r = await fetch(
         `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${process.env.FINNHUB_API_KEY}`
       );
+      // 수정됨: r.ok 체크 추가
+      if (!r.ok) return res.status(r.status).json({ error: `Finnhub API 오류 (${r.status})` });
       const data = await r.json();
       res.json(data);
     } else {
@@ -32,6 +25,8 @@ export default async function handler(req, res) {
       const r = await fetch(
         `https://finnhub.io/api/v1/company-news?symbol=${encodeURIComponent(symbol)}&from=${fromStr}&to=${toStr}&token=${process.env.FINNHUB_API_KEY}`
       );
+      // 수정됨: r.ok 체크 추가
+      if (!r.ok) return res.status(r.status).json({ error: `Finnhub API 오류 (${r.status})` });
       const data = await r.json();
       res.json(Array.isArray(data) ? data : []);
     }
