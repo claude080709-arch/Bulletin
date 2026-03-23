@@ -1,0 +1,17 @@
+# 환경변수 (절대 커밋 금지)
+.env
+.env.local
+.env.production
+
+# Vercel
+.vercel
+
+# 빌드 산출물
+node_modules/
+dist/
+.next/
+out/
+
+# OS
+.DS_Store
+Thumbs.db
