@@ -2,7 +2,7 @@
 
 한국/미국 주식을 한 곳에서 모니터링하고, 네이버 뉴스 기반 AI 감성 분석까지 제공하는 포트폴리오 뉴스 브리핑 앱.
 
-🔗 **라이브 링크:** [배포 URL 입력]
+🔗 **라이브 링크:** [Bulletin](https://bulletin-app-sable.vercel.app/)
 
 ---
 
@@ -122,4 +122,4 @@ vercel dev
 
 ## 7. 라이브 링크
 
-🔗 [배포 URL 입력]
+🔗 [https://bulletin-app-sable.vercel.app/](https://bulletin-app-sable.vercel.app/)
