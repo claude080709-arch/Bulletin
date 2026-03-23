@@ -13,6 +13,8 @@ export default async function handler(req, res) {
         `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(yfSymbol)}?range=1d&interval=1d`,
         { headers: { 'User-Agent': 'Mozilla/5.0' } }
       );
+      // 수정됨: r.ok 체크 추가
+      if (!r.ok) return res.status(r.status).json({ error: `Yahoo Finance 오류 (${r.status})` });
       const data = await r.json();
       const meta = data?.chart?.result?.[0]?.meta;
       if (!meta || !meta.regularMarketPrice) return res.json({});

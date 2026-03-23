@@ -10,6 +10,8 @@ export default async function handler(req, res) {
     const r = await fetch(
       `https://finnhub.io/api/v1/search?q=${encodeURIComponent(q)}&token=${process.env.FINNHUB_API_KEY}`
     );
+    // 수정됨: r.ok 체크 추가
+    if (!r.ok) return res.status(r.status).json({ error: `Finnhub 검색 오류 (${r.status})`, result: [] });
     const data = await r.json();
     const filtered = (data.result || [])
       .filter(s => ['Common Stock', 'ETP', 'ETF', 'Fund'].includes(s.type) || !s.type)
